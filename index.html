@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel de Exceções · Raster</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<style>
+:root{
+  --navy:#020039; --navy-2:#0E0B55; --navy-3:#1C1870;
+  --neon:#00FF00; --indigo:#6C69D9; --ink:#14123A; --muted:#5A5F7A;
+  --bg:#EEF0F7; --panel:#FFFFFF; --line:#DDE0EC; --soft:#F6F7FB;
+  --radius:10px; --top:58px; --side:290px;
+  --f:'Barlow',Arial,sans-serif; --fc:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:var(--f);color:var(--ink);background:var(--bg);font-size:14px;line-height:1.45}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--indigo);outline-offset:2px}
+
+/* topo */
+.top{background:var(--navy);color:#fff;display:flex;align-items:center;gap:16px;padding:0 24px 0 12px;height:var(--top);position:sticky;top:0;z-index:1000}
+.brand{display:flex;align-items:center;gap:14px;margin-right:auto}
+.brand .logo{height:26px;width:auto;color:#fff;flex-shrink:0;display:block}
+.brand span{color:#B9B7E6;font-size:14px;padding-left:14px;border-left:1px solid #3A3690}
+.file-info{color:#B9B7E6;font-size:13px;max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn{border:1px solid transparent;border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:600;background:var(--soft);color:var(--navy)}
+.btn:hover{border-color:var(--indigo)}
+.btn.primary{background:var(--neon);color:var(--navy)}
+.btn.ghost{background:transparent;color:#fff;border-color:#3A3690}
+.btn.ghost:hover{border-color:var(--neon)}
+.btn.small{padding:4px 10px;font-size:12px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* layout */
+.app{display:grid;grid-template-columns:var(--side) 1fr;min-height:calc(100vh - var(--top));transition:grid-template-columns .2s ease}
+.app.collapsed{--side:0px}
+aside{background:var(--panel);border-right:1px solid var(--line);position:sticky;top:var(--top);height:calc(100vh - var(--top));
+  display:flex;flex-direction:column;gap:12px;padding:12px 14px;overflow:hidden;min-width:0}
+.app.collapsed aside{padding:0;border:0;visibility:hidden}
+main{padding:18px 24px 48px;min-width:0}
+
+/* hamburger */
+.hamb{position:relative;width:40px;height:40px;border-radius:8px;border:1px solid #3A3690;background:transparent;color:#fff;cursor:pointer;display:grid;place-items:center;flex-shrink:0}
+.hamb:hover{border-color:var(--neon)}
+.hamb svg{width:20px;height:20px}
+.hamb .badge{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--neon);color:var(--navy);font-size:11px;font-weight:700;display:grid;place-items:center;padding:0 4px}
+
+/* filtros compactos */
+.fgroup{flex-shrink:0;min-height:0}
+.fgroup.grow{flex:1 1 0;display:flex;flex-direction:column;min-height:90px}
+.fgroup h3{font-family:var(--fc);font-size:15px;margin:0 0 5px;display:flex;gap:8px;align-items:center;color:var(--navy)}
+.fgroup h3 small{font-family:var(--f);font-size:11.5px;color:var(--muted);font-weight:500}
+.fgroup h3 .sp{margin-left:auto}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+input[type=date],input[type=search]{width:100%;border:1px solid var(--line);border-radius:6px;padding:4px 7px;background:var(--soft);font-size:12.5px;height:28px}
+.presets{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.chip{border:1px solid var(--line);background:var(--soft);border-radius:14px;padding:1px 9px;font-size:11.5px;line-height:1.6;cursor:pointer}
+.chip.on{background:var(--navy);color:var(--neon);border-color:var(--navy)}
+.checklist{border:1px solid var(--line);border-radius:6px;overflow:auto;margin-top:5px;background:var(--soft);flex:1 1 0;min-height:0}
+.checklist .grp{font-family:var(--fc);font-weight:600;font-size:12.5px;padding:4px 8px 2px;color:var(--navy);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#E9EBF5;z-index:1}
+.checklist label{display:flex;gap:6px;align-items:flex-start;padding:2px 8px;font-size:12px;line-height:1.35;cursor:pointer}
+.checklist label:hover{background:#E6E8F4}
+.checklist label span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.checklist label em{margin-left:auto;font-style:normal;color:var(--muted);font-size:11px;padding-left:6px}
+.checklist input{accent-color:var(--navy);margin:2px 0 0;flex-shrink:0}
+.linkbtns{display:flex;gap:8px;font-size:11.5px}
+.linkbtns button{background:none;border:0;padding:0;color:var(--indigo);cursor:pointer;font-weight:600}
+.side-foot{flex-shrink:0;display:flex;gap:8px;align-items:center;border-top:1px solid var(--line);padding-top:10px}
+.side-foot .btn{flex:1;padding:6px 10px;font-size:12.5px}
+.side-foot kbd{font-family:var(--f);font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 5px;background:var(--soft)}
+.active-filters{font-size:12.5px;color:var(--muted);margin:-4px 0 16px;min-height:18px}
+.active-filters b{color:var(--navy)}
+
+/* estado vazio */
+.empty{border:2px dashed #B9BCD6;border-radius:14px;background:var(--panel);padding:70px 30px;text-align:center;max-width:760px;margin:40px auto}
+.empty.drag{border-color:var(--indigo);background:#F2F1FF}
+.empty h2{font-family:var(--fc);font-size:34px;margin:0 0 8px;color:var(--navy)}
+.empty p{color:var(--muted);max-width:520px;margin:0 auto 22px}
+.err{color:#B00020;font-weight:600;margin-top:14px}
+
+/* kpis */
+.kpis{display:grid;grid-template-columns:1.3fr repeat(5,1fr);gap:12px;margin-bottom:16px}
+.kpi{background:var(--panel);border-radius:var(--radius);padding:14px 16px;border:1px solid var(--line)}
+.kpi .v{font-family:var(--fc);font-size:34px;font-weight:700;line-height:1.05;color:var(--navy)}
+.kpi .l{font-size:12.5px;color:var(--muted)}
+.kpi.hero{background:var(--navy);border-color:var(--navy)}
+.kpi.hero .v{color:var(--neon);font-size:42px}
+.kpi.hero .l{color:#C9C8E8}
+
+.grid{display:grid;gap:16px;margin-bottom:16px}
+.g-2{grid-template-columns:1.6fr 1fr}
+.g-2b{grid-template-columns:1fr 1fr}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;min-width:0}
+.card h2{font-family:var(--fc);font-size:21px;margin:0;color:var(--navy)}
+.card .sub{font-size:12.5px;color:var(--muted);margin:2px 0 12px}
+.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.chart-box{position:relative;height:300px}
+
+/* tabelas */
+.tbl-wrap{overflow:auto;max-height:430px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{position:sticky;top:0;background:var(--navy);color:#fff;text-align:left;font-weight:600;padding:7px 8px;white-space:nowrap;cursor:pointer;user-select:none;z-index:1}
+th.num,td.num{text-align:right}
+th[data-sort]:after{content:'';margin-left:4px}
+th.asc:after{content:'▲';font-size:9px;color:var(--neon)}
+th.desc:after{content:'▼';font-size:9px;color:var(--neon)}
+td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr:nth-child(even){background:var(--soft)}
+tbody tr.click{cursor:pointer}
+tbody tr.click:hover{background:#E6E8F4}
+tbody tr.sel{background:#DCDBF5 !important}
+.bar{height:8px;border-radius:4px;background:var(--indigo);min-width:2px}
+.barcell{width:70px;min-width:50px}
+.nowrap{white-space:nowrap;max-width:230px;overflow:hidden;text-overflow:ellipsis}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:10px;background:#E6E8F4;color:var(--navy);margin:1px 3px 1px 0;white-space:nowrap}
+.tag.cs{background:var(--navy);color:var(--neon)}
+.tag.fv{background:#E4E3FA}
+.more{margin-top:8px}
+
+/* mapa */
+.map-card{padding:0;overflow:hidden}
+.map-card .card-head{padding:16px 18px 10px}
+#map{height:560px;background:var(--navy)}
+.map-ctrl{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:12.5px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--soft);padding:5px 11px;cursor:pointer;font-size:12.5px}
+.seg button.on{background:var(--navy);color:var(--neon)}
+input[type=range]{accent-color:var(--navy);width:110px;vertical-align:middle}
+.map-foot{display:flex;justify-content:space-between;padding:8px 18px 12px;font-size:12px;color:var(--muted);flex-wrap:wrap;gap:8px}
+.legend-heat{display:inline-flex;align-items:center;gap:6px}
+.legend-heat i{display:inline-block;width:120px;height:8px;border-radius:4px;background:linear-gradient(90deg,#2C28A8,#6C69D9,#9CFF9C,#00FF00)}
+.leaflet-popup-content{font-family:var(--f);font-size:12.5px;margin:10px 12px}
+.leaflet-popup-content b{color:var(--navy)}
+
+.quality{font-size:12.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 18px}
+.quality b{color:var(--navy)}
+.hidden{display:none !important}
+.note{font-size:11.5px;color:var(--muted);margin-top:6px}
+
+@media (max-width:1280px){.kpis{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:1100px){.g-2,.g-2b{grid-template-columns:1fr}}
+@media (max-height:720px){.fgroup.grow{min-height:70px}}
+@media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <button class="hamb" id="btnHamb" aria-label="Mostrar ou ocultar filtros" aria-controls="filters" aria-expanded="true" title="Filtros (Ctrl+B)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span class="badge hidden" id="filterBadge"></span></button>
+  <div class="brand"><svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 98 30" role="img" aria-label="Raster"><g fill="currentColor"><path d="M32.5574 5.72878C31.5806 5.72239 30.5974 5.72422 29.5612 5.72695V9.02502C29.4263 8.88182 29.3633 8.81889 29.305 8.7514C28.838 8.22057 28.3455 7.7171 27.7626 7.30849C25.5983 5.7908 23.2013 5.42141 20.6566 5.94494C15.6338 6.97741 12.25 11.7339 12.8712 17.0029C13.3591 21.1401 16.2459 24.4199 20.0602 25.4497C20.5372 25.5783 21.0288 25.6722 21.5322 25.7279L21.8351 22.6669C21.5906 22.6277 21.3517 22.5785 21.1182 22.5183C18.4157 21.826 16.4392 19.7492 15.9284 16.7731C15.6439 14.8596 16.1236 12.8548 17.4854 11.1885C19.0988 9.29773 21.2988 8.46227 23.7459 8.77511C27.1743 9.26216 29.7756 12.4444 29.6525 15.809C29.6543 16.7485 29.5731 21.1228 29.5731 21.1228C31.2851 21.1228 32.634 21.1228 32.634 21.1228C32.634 21.1228 32.6432 20.1131 32.645 18.7742C32.645 18.0427 32.6459 17.2875 32.645 16.5259C32.6422 11.3472 32.6112 5.89204 32.5583 5.7306L32.5574 5.72878Z"/><path d="M43.0482 14.2932C38.5152 13.5608 38.2169 12.0796 38.1941 11.2094C38.2324 9.58412 39.9955 8.28624 42.4608 8.33184C46.162 8.43855 46.5998 10.5637 46.5998 10.5637H49.7665C48.7259 6.90444 45.0921 5.60291 42.4699 5.6704C39.3661 5.80448 35.1341 6.76763 35.2144 11.5661C35.4688 16.1766 41.3709 16.9199 43.8599 17.4015C46.3481 17.9232 47.0467 18.9274 47.0595 20.145C46.9655 22.1398 44.9316 23.1029 42.6824 23.1166C38.7477 23.0628 38.1184 21.0015 38.1184 21.0015H34.7592C36.4858 26.0206 42.7362 25.726 42.7362 25.726C46.4037 25.5254 50.1797 24.2403 50.177 20.0766C50.3256 15.6212 45.27 14.7346 43.0482 14.2913V14.2932Z"/><path d="M9.00401 5.7452C7.97884 5.86559 7.02481 6.18573 6.13189 6.70744C4.99635 7.37143 4.09978 8.28168 3.34641 9.34608C3.27162 9.45188 3.12204 9.65162 3.0436 9.7556C3.0436 9.73918 3.0436 9.71091 3.0436 9.63976V7.2556C3.0436 7.2556 3.0436 7.2556 3.04269 7.2556V6.43291H0V25.7242H3.0436V25.2025C3.0436 22.1088 3.0436 19.0159 3.04542 15.9221C3.04542 15.5965 3.03995 15.2682 3.07917 14.9471C3.49234 11.5606 6.4429 8.69212 10.0666 8.73955C10.6503 8.74684 11.234 8.74228 11.8178 8.73955C11.9482 8.73955 12.0777 8.72313 12.2027 8.71492V5.67771C11.1155 5.70689 10.0593 5.62207 9.00401 5.74611V5.7452Z"/><path d="M94.803 5.7452C93.7778 5.86559 92.8229 6.18573 91.9308 6.70744C90.7953 7.37143 89.8987 8.28168 89.1454 9.34608C89.0706 9.45188 88.9201 9.65162 88.8426 9.7556C88.8426 9.73918 88.8426 9.71091 88.8426 9.63976V7.2556C88.8426 7.2556 88.8426 7.2556 88.8416 7.2556V6.43291H85.798V25.7242H88.8416V25.2025C88.8416 22.1088 88.8407 19.0159 88.8435 15.9221C88.8435 15.5965 88.838 15.2682 88.8772 14.9471C89.2904 11.5606 92.241 8.69212 95.8646 8.73955C96.4484 8.74684 97.0321 8.74228 97.6158 8.73955C97.7462 8.73955 97.8758 8.72313 98.0007 8.71492V5.67771C96.9135 5.70689 95.8573 5.62207 94.8021 5.74611L94.803 5.7452Z"/><path d="M21.2906 20.3311L25.2199 24.2594L21.2906 28.1886L23.102 30L28.8417 24.2594L23.102 18.5197L21.2906 20.3311Z"/><path d="M81.608 9.45095C78.113 4.81578 71.515 4.39166 67.5247 8.55711C65.8483 10.3074 64.9198 12.4125 64.7082 14.8203C64.4273 18.0217 65.364 20.83 67.6843 23.0673C69.5978 24.9115 71.7841 25.8127 74.1874 25.7598C74.1874 24.4154 74.1874 23.7286 74.1874 22.6952C73.8098 22.687 73.4221 22.645 73.0254 22.5675C70.1998 22.0148 68.4468 20.446 67.7563 17.459C67.4444 15.7233 67.6642 12.5082 69.7593 10.5272C70.8309 9.51388 72.1015 8.91738 73.5726 8.77692C76.8306 8.46591 79.3589 10.5892 80.2645 13.0108H72.5976V15.8537H77.2702C78.3428 15.8537 77.2702 15.8537 83.7122 15.8309C83.7122 15.6522 83.7186 15.5172 83.7113 15.3831C83.59 13.2005 82.9324 11.2076 81.6071 9.45004L81.608 9.45095Z"/><path d="M73.5753 20.3311L77.5036 24.2594L73.5753 28.1886L75.3867 30L81.1264 24.2594L75.3867 18.5197L73.5753 20.3311Z"/><path d="M58.4239 2.47955e-05H55.1897V2.70707C55.1897 4.93618 53.8955 5.51626 53.2215 5.66766H51.1802V8.74501H55.353V9.31049C55.353 13.0299 55.3813 16.7485 55.3439 20.4679C55.3156 23.2808 57.7271 25.6421 60.4104 25.7352C61.2514 25.7643 62.0941 25.7461 62.936 25.7461C62.9989 25.7461 63.0618 25.7233 63.1303 25.7096V22.6989C62.9688 22.6989 62.8357 22.6989 62.7025 22.6989C62.0102 22.6989 61.317 22.7089 60.6248 22.6952C59.6762 22.677 59.0031 22.2319 58.6228 21.3545C58.4677 20.9978 58.4239 20.6248 58.4239 20.2417C58.4239 16.536 58.4239 12.8311 58.4249 9.12534C58.4249 9.01225 58.4258 8.89276 58.4258 8.74501H63.1321V5.66766H58.4239V2.47955e-05Z"/></g></svg><span>Painel de exceções e contextos suspeitos</span></div>
+  <span class="file-info" id="fileInfo">Nenhuma planilha carregada</span>
+  <button class="btn ghost" id="btnExport" disabled>Exportar CSV filtrado</button>
+  <button class="btn primary" id="btnUpload">Carregar planilha</button>
+  <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden>
+</header>
+
+<div class="app">
+<aside id="filters">
+  <div class="fgroup">
+    <h3>Período <small class="sp" id="periodInfo"></small></h3>
+    <div class="row2">
+      <input type="date" id="dtFrom" aria-label="Data inicial" title="De">
+      <input type="date" id="dtTo" aria-label="Data final" title="Até">
+    </div>
+    <div class="presets" id="monthPresets"></div>
+  </div>
+
+  <div class="fgroup">
+    <h3>Classe</h3>
+    <div class="presets" id="classChips" style="margin-top:0"></div>
+  </div>
+
+  <div class="fgroup">
+    <h3>Placa ou carreta</h3>
+    <input type="search" id="plateSearch" placeholder="Ex.: BRY2E52">
+  </div>
+
+  <div class="fgroup grow" style="flex-grow:1.25">
+    <h3>Exceções <small id="excCount"></small><span class="linkbtns sp"><button data-all="exc">Todas</button><button data-none="exc">Nenhuma</button></span></h3>
+    <input type="search" id="excSearch" placeholder="Buscar exceção">
+    <div class="checklist" id="excList"></div>
+  </div>
+
+  <div class="fgroup grow">
+    <h3>Clientes <small id="cliCount"></small><span class="linkbtns sp"><button data-all="cli">Todos</button><button data-none="cli">Nenhum</button></span></h3>
+    <input type="search" id="cliSearch" placeholder="Buscar cliente">
+    <div class="checklist" id="cliList"></div>
+  </div>
+
+  <div class="side-foot">
+    <button class="btn" id="btnReset">Limpar filtros</button>
+    <span title="Mostrar ou ocultar este painel"><kbd>Ctrl</kbd> + <kbd>B</kbd></span>
+  </div>
+</aside>
+
+<main>
+  <section class="empty" id="empty">
+    <h2>Carregue o export do BI</h2>
+    <p>Arraste o arquivo data.xlsx para cá ou use o botão abaixo. Os dados são lidos só no seu navegador, nada é enviado para servidor.</p>
+    <button class="btn primary" id="btnUpload2">Escolher arquivo</button>
+    <div class="err" id="errMsg"></div>
+  </section>
+
+  <section id="dash" class="hidden">
+    <div class="active-filters" id="activeFilters"></div>
+    <div class="kpis" id="kpis"></div>
+
+    <div class="grid g-2">
+      <div class="card">
+        <div class="card-head">
+          <div><h2>Ranking por cliente</h2><div class="sub">Clique numa linha para filtrar o painel pelo cliente</div></div>
+        </div>
+        <div class="tbl-wrap"><table id="tblCli"></table></div>
+      </div>
+      <div class="card">
+        <h2>Composição por tipo</h2>
+        <div class="sub">Equipamento, fim de viagem e contexto suspeito</div>
+        <div class="chart-box" style="height:380px"><canvas id="chTipo"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card map-card" style="margin-bottom:16px">
+      <div class="card-head">
+        <div><h2>Mapa de calor dos locais</h2><div class="sub" id="mapSub"></div></div>
+        <div class="map-ctrl">
+          <div class="seg" id="mapMode"><button data-v="heat" class="on">Calor</button><button data-v="points">Locais</button><button data-v="both">Ambos</button></div>
+          <div class="seg" id="mapBase"><button data-v="dark" class="on">Escuro</button><button data-v="light">Claro</button><button data-v="ruas">Ruas</button><button data-v="sat">Satélite</button></div>
+          <label>Raio <input type="range" id="heatRadius" min="8" max="40" value="18"></label>
+        </div>
+      </div>
+      <div id="map"></div>
+      <div class="map-foot"><span class="legend-heat">Menos <i></i> Mais eventos</span><span id="mapNote"></span></div>
+    </div>
+
+    <div class="grid g-2b">
+      <div class="card">
+        <div class="card-head">
+          <div><h2>Evolução mensal</h2><div class="sub">Pela data da exceção</div></div>
+          <div class="seg" id="evoMode"><button data-v="classe" class="on">Por classe</button><button data-v="total">Total</button></div>
+        </div>
+        <div class="chart-box"><canvas id="chMes"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>Contextos suspeitos por composição</h2>
+        <div class="sub">Quais alertas combinados estão gerando os CS</div>
+        <div class="chart-box"><canvas id="chCS"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid g-2b">
+      <div class="card">
+        <div class="card-head">
+          <div><h2>Locais ofensores</h2><div class="sub">Candidatos a inibição, cadastro de destinatário ou ajuste de raio. Clique para ver no mapa</div></div>
+        </div>
+        <div class="tbl-wrap"><table id="tblLoc"></table></div>
+        <button class="btn small more" data-more="loc">Mostrar mais</button>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <div><h2>Placas para GQ</h2><div class="sub">Eventos de equipamento e contexto suspeito por placa</div></div>
+        </div>
+        <div class="tbl-wrap"><table id="tblPlaca"></table></div>
+        <button class="btn small more" data-more="placa">Mostrar mais</button>
+      </div>
+    </div>
+
+    <div class="grid g-2b">
+      <div class="card">
+        <div class="card-head">
+          <div><h2>Motoristas em fim de viagem</h2><div class="sub">Quem mais aparece em FV não informada, fora do raio ou entrega pendente</div></div>
+        </div>
+        <div class="tbl-wrap"><table id="tblMot"></table></div>
+        <button class="btn small more" data-more="mot">Mostrar mais</button>
+      </div>
+      <div class="card">
+        <h2>Qualidade da leitura</h2>
+        <div class="sub">Conferência da normalização do arquivo carregado</div>
+        <div class="quality" id="quality"></div>
+        <div class="note">Linhas sem cliente (como o rodapé de filtros do BI) são descartadas. Eventos sem coordenada contam nos totais, mas não aparecem no mapa. Nomes de cliente, local, exceção e motorista são unificados ignorando acento, caixa e espaços; placas ignoram hífen.</div>
+      </div>
+    </div>
+  </section>
+</main>
+</div>
+
+<script id="core">
+/* ============ Núcleo: leitura, normalização e agregação (sem DOM, testável em Node) ============ */
+const Core = (() => {
+  // chave canônica: sem acento, espaços colapsados (inclui NBSP), maiúsculas
+  const strip = s => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\s\u00a0]+/g, ' ').trim().toUpperCase();
+  const clean = s => String(s ?? '').replace(/[\s\u00a0]+/g, ' ').trim();
+
+  // colunas: nomes em ordem de prioridade
+  const COLS = {
+    cliente: ['CLIENTE'], viagem: ['COD VIAGEM', 'CODIGO VIAGEM', 'COD. VIAGEM', 'VIAGEM'],
+    filial: ['FILIAL'], placa: ['PLACA'], carreta: ['CARRETA'], motorista: ['MOTORISTA'],
+    tecnologia: ['TECNOLOGIA'], excecao: ['EXCECOES', 'EXCECAO'], data: ['DATA EXCECAO', 'DATA DA EXCECAO'],
+    lat: ['LATITUDE', 'LAT'], lon: ['LONGITUDE', 'LON', 'LNG'], referencia: ['REFERENCIA', 'LOCAL'], classe: ['CLASSE']
+  };
+  const REQUIRED = ['cliente', 'excecao', 'data'];
+
+  function findHeader(rows) {
+    for (let i = 0; i < Math.min(rows.length, 30); i++) {
+      const r = (rows[i] || []).map(strip);
+      if (r.includes('CLIENTE') && r.some(c => c.startsWith('EXCEC'))) return i;
+    }
+    return -1;
+  }
+
+  function mapColumns(header) {
+    const h = header.map(strip), idx = {};
+    for (const [key, names] of Object.entries(COLS)) {
+      let i = -1;
+      for (const n of names) { i = h.indexOf(strip(n)); if (i >= 0) break; }        // exato, por prioridade
+      if (i < 0 && key !== 'data') for (const n of names) { i = h.findIndex(c => c.startsWith(strip(n))); if (i >= 0) break; }
+      idx[key] = i;
+    }
+    return idx;
+  }
+
+  const pad = n => String(n).padStart(2, '0');
+  const validDate = d => d instanceof Date && !isNaN(d) && d.getFullYear() >= 2000 && d.getFullYear() <= 2100 ? d : null;
+  function parseDate(v, SSF) {
+    if (v == null || v === '') return null;
+    if (v instanceof Date) return validDate(v);
+    if (typeof v === 'number') {
+      if (SSF) { const d = SSF.parse_date_code(v); if (d) return validDate(new Date(d.y, d.m - 1, d.d, d.H, d.M, Math.floor(d.S))); }
+      return validDate(new Date(Math.round((v - 25569) * 864e5)));
+    }
+    const s = String(v).trim();
+    let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:[ T,]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);          // dd/mm/aaaa (padrão BR)
+    if (m) { const y = +m[3] < 100 ? 2000 + +m[3] : +m[3]; if (+m[2] > 12) return null;
+      return validDate(new Date(y, m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0))); }
+    m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?/);                         // ISO
+    if (m) return validDate(new Date(+m[1], m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0)));
+    return null;
+  }
+
+  function parseNum(v) {
+    if (v == null || v === '') return null;
+    if (typeof v === 'number') return isFinite(v) ? v : null;
+    let t = String(v).trim().replace(/\s/g, '');
+    if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(t)) t = t.replace(/\./g, '');                                 // 1.234,56
+    t = t.replace(',', '.');
+    return /^-?\d+(\.\d+)?$/.test(t) ? parseFloat(t) : null;
+  }
+
+  function normClasse(raw, exc) {
+    const c = strip(raw);
+    if (c.startsWith('CONTEXTO')) return 'CS';
+    if (c.startsWith('MOTORISTA')) return 'FV';
+    if (c.startsWith('VEICULO')) return 'EQ';
+    const e = strip(exc);                                                                                  // classe ausente: deduz pela exceção
+    if (e.startsWith('ALERTA')) return 'CS';
+    if (e.includes('FINAL DE VIAGEM')) return 'FV';
+    return 'EQ';
+  }
+
+  function tipoOf(classe, exc) {
+    const e = strip(exc);
+    if (classe === 'CS') return 'Contexto suspeito';
+    if (classe === 'FV') {
+      if (e.includes('FORA DO RAIO')) return 'FV fora do raio';
+      if (e.includes('ENTREGA PENDENTE')) return 'FV entrega pendente';
+      if (e.includes('FINAL DE VIAGEM')) return 'FV não informada';
+      return 'FV outros';
+    }
+    if (/\bBAU\b/.test(e)) return 'Baú';
+    if (/\bDESENGATE\b/.test(e)) return 'Desengate';
+    if (/\bANTENA\b/.test(e)) return 'Antena';
+    if (/\bPAINEL\b/.test(e)) return 'Painel';
+    return 'Equip. outros';
+  }
+
+  function csTipo(exc) {
+    const e = strip(exc);
+    if (e.includes('VALOR DA SM')) return 'Desengate + valor SM';
+    if (e.includes('PERDA DE SINAL')) return 'Alerta + perda de sinal';
+    if (e.includes('PARADA PROIBIDA')) return 'Parada proibida + violação';
+    if (e.includes('PAINEL')) return 'Alertas de painel';
+    return 'Outros';
+  }
+
+  const localOf = ref => clean(ref).replace(/^[\d.,]+\s*km\s+de\s+/i, '').trim() || '(sem referência)';
+  const plateKey = p => strip(p).replace(/[^A-Z0-9]/g, '');
+
+  function normalize(rows, SSF) {
+    const hi = findHeader(rows);
+    if (hi < 0) throw new Error('Não encontrei o cabeçalho com as colunas "Cliente" e "Exceções". Confira se é o export do BI de exceções.');
+    const idx = mapColumns(rows[hi]);
+    const missing = REQUIRED.filter(k => idx[k] < 0);
+    if (missing.length) throw new Error('Colunas obrigatórias ausentes: ' + missing.join(', ') + '.');
+    const get = (r, k) => idx[k] >= 0 ? r[idx[k]] : null;
+    const disp = { cliente: new Map(), local: new Map(), excecao: new Map(), motorista: new Map() };   // chave -> 1º rótulo visto
+    const label = (kind, raw) => { const k = kind === 'cliente' ? strip(raw).replace(/[.\s]+$/, '') : strip(raw);
+      if (!disp[kind].has(k)) disp[kind].set(k, clean(raw)); return disp[kind].get(k); };
+    const out = [], seen = new Set();
+    const stats = { lidas: 0, vazias: 0, descartadas: 0, semData: 0, semCoord: 0, duplicadas: 0, classeDeduzida: 0 };
+    for (let i = hi + 1; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r || r.every(v => v == null || String(v).trim() === '')) { stats.vazias++; continue; }
+      stats.lidas++;
+      const cRaw = get(r, 'cliente'), eRaw = get(r, 'excecao');
+      if (!clean(cRaw) || !clean(eRaw)) { stats.descartadas++; continue; }
+      const cliente = label('cliente', cRaw), excecao = label('excecao', eRaw);
+      const data = parseDate(get(r, 'data'), SSF);
+      if (!data) stats.semData++;
+      let lat = parseNum(get(r, 'lat')), lon = parseNum(get(r, 'lon'));
+      if (lat == null || lon == null || Math.abs(lat) > 90 || Math.abs(lon) > 180 || (lat === 0 && lon === 0)) { lat = lon = null; stats.semCoord++; }
+      if (!clean(get(r, 'classe'))) stats.classeDeduzida++;
+      const classe = normClasse(get(r, 'classe'), eRaw);
+      const placa = plateKey(get(r, 'placa'));
+      const viagem = clean(get(r, 'viagem')).replace(/\.0+$/, '');
+      const rec = {
+        cliente, excecao, classe, tipo: tipoOf(classe, eRaw), csTipo: classe === 'CS' ? csTipo(eRaw) : null,
+        data, mes: data ? data.getFullYear() + '-' + pad(data.getMonth() + 1) : null,
+        dia: data ? data.getFullYear() + '-' + pad(data.getMonth() + 1) + '-' + pad(data.getDate()) : null,
+        placa, carreta: plateKey(get(r, 'carreta')), motorista: label('motorista', get(r, 'motorista')),
+        filial: clean(get(r, 'filial')), viagem, tecnologia: clean(get(r, 'tecnologia')).toUpperCase(),
+        lat, lon, referencia: clean(get(r, 'referencia')), local: label('local', localOf(get(r, 'referencia')))
+      };
+      rec.dupKey = [rec.viagem, strip(eRaw), data ? data.getTime() : '', placa].join('|');
+      rec.dup = seen.has(rec.dupKey); if (rec.dup) stats.duplicadas++; else seen.add(rec.dupKey);
+      out.push(rec);
+    }
+    stats.validas = out.length;
+    return { records: out, stats, columns: idx };
+  }
+
+  // f: {from,to:'AAAA-MM-DD', classes:Set|null, excecoes:Set|null, clientes:Set|null, placa:string, semDup:bool}
+  function filter(records, f, skip) {
+    const plate = plateKey(f.placa || '');
+    return records.filter(r =>
+      (!f.semDup || !r.dup) &&
+      (!f.from || (r.dia && r.dia >= f.from)) &&
+      (!f.to || (r.dia && r.dia <= f.to)) &&
+      (!f.classes || f.classes.has(r.classe)) &&
+      (skip === 'exc' || !f.excecoes || f.excecoes.has(r.excecao)) &&
+      (skip === 'cli' || !f.clientes || f.clientes.has(r.cliente)) &&
+      (!plate || r.placa.includes(plate) || r.carreta.includes(plate)));
+  }
+
+  function countBy(arr, keyFn) {
+    const m = new Map();
+    for (const r of arr) { const k = keyFn(r); if (k == null || k === '') continue; m.set(k, (m.get(k) || 0) + 1); }
+    return m;
+  }
+  const inc = (m, k) => m.set(k, (m.get(k) || 0) + 1);
+
+  // todas as agregações do painel, a partir do conjunto filtrado
+  function aggregate(F) {
+    const n = F.length, byClasse = countBy(F, r => r.classe);
+    const meses = [...new Set(F.map(r => r.mes).filter(Boolean))].sort();
+
+    const gc = new Map();
+    for (const r of F) { let o = gc.get(r.cliente); if (!o) gc.set(r.cliente, o = { cliente: r.cliente, total: 0, EQ: 0, FV: 0, CS: 0, m: {} });
+      o.total++; o[r.classe]++; if (r.mes) o.m[r.mes] = (o.m[r.mes] || 0) + 1; }
+    const clientes = [...gc.values()].sort((a, b) => b.total - a.total || a.cliente.localeCompare(b.cliente));
+    let acc = 0; clientes.forEach((c, i) => { c.rank = i + 1; c.pct = n ? c.total / n : 0; acc += c.total; c.acum = n ? acc / n : 0; });
+
+    const mesClasse = meses.map(m => ({ mes: m, EQ: 0, FV: 0, CS: 0, total: 0 })), mi = new Map(meses.map((m, i) => [m, i]));
+    for (const r of F) if (r.mes) { const o = mesClasse[mi.get(r.mes)]; o[r.classe]++; o.total++; }
+
+    const gl = new Map();
+    for (const r of F) { let o = gl.get(r.local); if (!o) gl.set(r.local, o = { local: r.local, total: 0, tipos: new Map(), cli: new Map(), placas: new Set(), la: 0, lo: 0, nc: 0 });
+      o.total++; inc(o.tipos, r.tipo); inc(o.cli, r.cliente); if (r.placa) o.placas.add(r.placa); if (r.lat != null) { o.la += r.lat; o.lo += r.lon; o.nc++; } }
+    const locais = [...gl.values()].map(o => Object.assign(o, { nCli: o.cli.size, nPl: o.placas.size, lat: o.nc ? o.la / o.nc : null, lon: o.nc ? o.lo / o.nc : null }))
+      .sort((a, b) => b.total - a.total || a.local.localeCompare(b.local));
+
+    const gp = new Map();
+    for (const r of F) { if (r.classe === 'FV' || !r.placa) continue; let o = gp.get(r.placa);
+      if (!o) gp.set(r.placa, o = { placa: r.placa, clis: new Map(), total: 0, tipos: new Map(), viagens: new Set(), tec: new Map() });
+      o.total++; inc(o.tipos, r.tipo); inc(o.clis, r.cliente); inc(o.tec, r.tecnologia); if (r.viagem) o.viagens.add(r.viagem); }
+    const top = m => [...m.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
+    const placas = [...gp.values()].map(o => Object.assign(o, { cliente: top(o.clis), tecnologia: top(o.tec), nViagens: o.viagens.size, porViagem: o.total / Math.max(o.viagens.size, 1) }))
+      .sort((a, b) => b.total - a.total || a.placa.localeCompare(b.placa));
+
+    const gm = new Map();
+    for (const r of F) { if (r.classe !== 'FV' || !r.motorista) continue; let o = gm.get(r.motorista);
+      if (!o) gm.set(r.motorista, o = { motorista: r.motorista, clis: new Map(), total: 0, tipos: new Map(), locais: new Map() });
+      o.total++; inc(o.tipos, r.tipo); inc(o.clis, r.cliente); inc(o.locais, r.local); }
+    const motoristas = [...gm.values()].map(o => { const t = [...o.locais.entries()].sort((a, b) => b[1] - a[1])[0];
+      return Object.assign(o, { cliente: top(o.clis), topLocal: t ? t[0] : '', topLocalN: t ? t[1] : 0 }); })
+      .sort((a, b) => b.total - a.total || a.motorista.localeCompare(b.motorista));
+
+    const top3 = clientes.slice(0, 3).reduce((a, c) => a + c.total, 0);
+    return {
+      n, EQ: byClasse.get('EQ') || 0, FV: byClasse.get('FV') || 0, CS: byClasse.get('CS') || 0,
+      nClientes: clientes.length, top3pct: n ? top3 / n : 0,
+      nPlacasEq: placas.length, geo: F.filter(r => r.lat != null).length,
+      tipos: countBy(F, r => r.tipo), csTipos: countBy(F.filter(r => r.classe === 'CS'), r => r.csTipo),
+      meses, mesClasse, clientes, locais, placas, motoristas
+    };
+  }
+
+  return { strip, clean, normalize, filter, countBy, aggregate, parseDate, parseNum, tipoOf, csTipo, normClasse, localOf, plateKey, mapColumns, findHeader };
+})();
+if (typeof module !== 'undefined') module.exports = Core;
+</script>
+
+<script>
+/* ============ Interface ============ */
+(() => {
+  const $ = s => document.querySelector(s);
+  const $$ = s => [...document.querySelectorAll(s)];
+  const nf = new Intl.NumberFormat('pt-BR');
+  const pf = v => (v * 100).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const mesLabel = k => { const [y, m] = k.split('-'); return MESES[+m - 1] + '/' + y.slice(2); };
+  const C = { navy: '#020039', neon: '#00FF00', indigo: '#6C69D9', ink: '#14123A', muted: '#5A5F7A', line: '#DDE0EC' };
+  const CLASS_LABEL = { EQ: 'Equipamento', FV: 'Fim de viagem', CS: 'Contexto suspeito' };
+  const CLASS_COLOR = { EQ: C.navy, FV: C.indigo, CS: C.neon };
+  const TIPOS = ['Baú', 'Desengate', 'Antena', 'Painel', 'Equip. outros', 'FV não informada', 'FV fora do raio', 'FV entrega pendente', 'FV outros', 'Contexto suspeito'];
+  const tipoClasse = t => t === 'Contexto suspeito' ? 'CS' : (t.startsWith('FV') ? 'FV' : 'EQ');
+  const fmtDia = d => d ? d.split('-').reverse().join('/') : '';
+  const short = c => c.replace(/\s+(LTDA\.?|S\/?A\.?|EIRELI|ME)$/i, '').replace(/TRANSPORTES? RODOVIARIOS? DE CARGAS?/i, 'TRANSP.').trim();
+
+  let ALL = [], META = {}, FILT = [], AGG = null, ALL_EXC = new Set(), ALL_CLI = new Set();
+  const st = { from: '', to: '', classes: new Set(['EQ', 'FV', 'CS']), exc: new Set(), cli: new Set(), placa: '', semDup: false, sort: {}, more: { loc: 15, placa: 15, mot: 15 } };
+  const charts = {};
+  let map, heat, pts, baseLayer, mapMode = 'heat', mapBase = 'dark', evoMode = 'classe';
+
+  Chart.defaults.font.family = "'Barlow', Arial, sans-serif";
+  Chart.defaults.color = C.muted;
+  Chart.defaults.locale = 'pt-BR';
+
+  /* ---------- painel lateral ---------- */
+  const app = $('.app');
+  function setSide(open) {
+    app.classList.toggle('collapsed', !open);
+    $('#btnHamb').setAttribute('aria-expanded', open);
+    try { localStorage.setItem('painelFiltros', open ? '1' : '0'); } catch (e) {}
+    setTimeout(() => { if (map) map.invalidateSize(); Object.values(charts).forEach(c => c.resize()); }, 230);
+  }
+  $('#btnHamb').onclick = () => setSide(app.classList.contains('collapsed'));
+  document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); $('#btnHamb').click(); } });
+  try { if (localStorage.getItem('painelFiltros') === '0') app.classList.add('collapsed'), $('#btnHamb').setAttribute('aria-expanded', 'false'); } catch (e) {}
+
+  /* ---------- upload ---------- */
+  const fileInput = $('#fileInput');
+  $('#btnUpload').onclick = $('#btnUpload2').onclick = () => fileInput.click();
+  fileInput.onchange = e => { if (e.target.files[0]) loadFile(e.target.files[0]); e.target.value = ''; };
+  const emptyEl = $('#empty');
+  ['dragenter', 'dragover'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); emptyEl.classList.add('drag'); }));
+  ['dragleave', 'drop'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); if (ev === 'drop' || e.target === emptyEl) emptyEl.classList.remove('drag'); }));
+  document.addEventListener('drop', e => { const f = e.dataTransfer?.files?.[0]; if (f) loadFile(f); });
+
+  function loadFile(file) {
+    $('#errMsg').textContent = '';
+    $('#fileInfo').textContent = 'Lendo ' + file.name + '…';
+    const isCsv = /\.csv$/i.test(file.name);
+    const rd = new FileReader();
+    rd.onload = ev => {
+      try {
+        const buf = new Uint8Array(ev.target.result);
+        let wb;
+        if (isCsv) {
+          // CSV: decodifica UTF-8 e, se falhar, Windows-1252 (padrão do Excel BR). raw evita ler 05/06 como data americana
+          let text; try { text = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch { text = new TextDecoder('windows-1252').decode(buf); }
+          wb = XLSX.read(text.replace(/^\ufeff/, ''), { type: 'string', raw: true });
+        } else wb = XLSX.read(buf, { type: 'array', cellDates: false });
+        let res = null, lastErr;
+        for (const name of wb.SheetNames) {
+          const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: null, blankrows: false });
+          try { res = Core.normalize(rows, XLSX.SSF); res.sheet = name; break; } catch (err) { lastErr = err; }
+        }
+        if (!res) throw lastErr || new Error('Planilha vazia.');
+        if (!res.records.length) throw new Error('Nenhuma linha válida encontrada.');
+        init(res, file.name);
+      } catch (err) {
+        console.error(err);
+        $('#fileInfo').textContent = 'Falha ao ler ' + file.name;
+        $('#errMsg').textContent = err.message;
+        $('#empty').classList.remove('hidden'); $('#dash').classList.add('hidden');
+      }
+    };
+    rd.readAsArrayBuffer(file);
+  }
+
+  /* ---------- init ---------- */
+  function init(res, fname) {
+    ALL = res.records;
+    ALL_EXC = new Set(ALL.map(r => r.excecao)); ALL_CLI = new Set(ALL.map(r => r.cliente));
+    const dias = ALL.map(r => r.dia).filter(Boolean).sort();
+    META = { res, stats: res.stats, sheet: res.sheet, fname, min: dias[0], max: dias[dias.length - 1],
+      meses: [...new Set(ALL.map(r => r.mes).filter(Boolean))].sort() };
+    Object.assign(st, { from: '', to: '', placa: '', semDup: false, classes: new Set(['EQ', 'FV', 'CS']), exc: new Set(ALL_EXC), cli: new Set(ALL_CLI), sort: {}, more: { loc: 15, placa: 15, mot: 15 } });
+    $('#fileInfo').textContent = fname + ' · ' + nf.format(ALL.length) + ' eventos';
+    $('#empty').classList.add('hidden'); $('#dash').classList.remove('hidden');
+    $('#btnExport').disabled = false;
+    $('#dtFrom').min = $('#dtTo').min = META.min || ''; $('#dtFrom').max = $('#dtTo').max = META.max || '';
+    $('#dtFrom').value = ''; $('#dtTo').value = ''; $('#plateSearch').value = ''; $('#excSearch').value = ''; $('#cliSearch').value = '';
+    $('#periodInfo').textContent = META.min ? fmtDia(META.min) + ' a ' + fmtDia(META.max) : '';
+    buildPresets(); buildClassChips(); buildExcList(); buildCliList();
+    if (!map) initMap();
+    render(true);
+  }
+
+  /* ---------- filtros ---------- */
+  function buildPresets() {
+    const box = $('#monthPresets'); box.innerHTML = '';
+    const mk = (label, from, to) => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = label; b.dataset.from = from; b.dataset.to = to;
+      b.onclick = () => { st.from = from; st.to = to; $('#dtFrom').value = from; $('#dtTo').value = to; render(true); }; box.appendChild(b); };
+    mk('Tudo', '', '');
+    META.meses.forEach(m => { const [y, mm] = m.split('-'); const last = new Date(+y, +mm, 0).getDate(); mk(mesLabel(m), m + '-01', m + '-' + String(last).padStart(2, '0')); });
+  }
+  function syncPresets() { $$('#monthPresets .chip').forEach(b => b.classList.toggle('on', b.dataset.from === st.from && b.dataset.to === st.to)); }
+  $('#dtFrom').onchange = e => { st.from = e.target.value; if (st.to && st.from > st.to) { st.to = st.from; $('#dtTo').value = st.to; } render(true); };
+  $('#dtTo').onchange = e => { st.to = e.target.value; if (st.from && st.to < st.from) { st.from = st.to; $('#dtFrom').value = st.from; } render(true); };
+  let pt; $('#plateSearch').oninput = e => { clearTimeout(pt); pt = setTimeout(() => { st.placa = e.target.value; render(true); }, 250); };
+
+  function buildClassChips() {
+    const box = $('#classChips'); box.innerHTML = '';
+    Object.entries(CLASS_LABEL).forEach(([k, l]) => { const b = document.createElement('button'); b.className = 'chip on'; b.textContent = l; b.dataset.k = k;
+      b.onclick = () => { st.classes.has(k) ? st.classes.delete(k) : st.classes.add(k); b.classList.toggle('on', st.classes.has(k)); render(true); }; box.appendChild(b); });
+  }
+  const sentence = s => { const t = s.toLowerCase(); return t.charAt(0).toUpperCase() + t.slice(1); };
+  function buildExcList() {
+    const cnt = Core.countBy(ALL, r => r.excecao), clsOf = new Map(ALL.map(r => [r.excecao, r.classe]));
+    const byClass = { EQ: [], FV: [], CS: [] };
+    [...cnt.keys()].sort((a, b) => cnt.get(b) - cnt.get(a)).forEach(e => byClass[clsOf.get(e)].push(e));
+    const box = $('#excList'); box.innerHTML = '';
+    Object.entries(byClass).forEach(([k, list]) => {
+      if (!list.length) return;
+      const g = document.createElement('div'); g.className = 'grp'; g.innerHTML = `<span>${CLASS_LABEL[k]}</span>`;
+      const tg = document.createElement('button'); tg.className = 'btn small'; tg.style.cssText = 'padding:0 8px;font-size:11px'; tg.textContent = 'só estes';
+      tg.onclick = () => { st.exc = new Set(list); syncChecks('exc'); render(true); }; g.appendChild(tg); box.appendChild(g);
+      list.forEach(e => box.appendChild(checkRow('exc', e, sentence(e))));
+    });
+  }
+  function buildCliList() {
+    const cnt = Core.countBy(ALL, r => r.cliente);
+    const box = $('#cliList'); box.innerHTML = '';
+    [...cnt.keys()].sort((a, b) => cnt.get(b) - cnt.get(a)).forEach(c => box.appendChild(checkRow('cli', c, c)));
+  }
+  function checkRow(kind, val, label) {
+    const l = document.createElement('label'); l.dataset.val = val; l.dataset.search = Core.strip(label);
+    const i = document.createElement('input'); i.type = 'checkbox'; i.checked = st[kind].has(val);
+    i.onchange = () => { i.checked ? st[kind].add(val) : st[kind].delete(val); render(true); };
+    l.append(i, Object.assign(document.createElement('span'), { textContent: label }), document.createElement('em'));
+    l.title = val; return l;
+  }
+  // contagem facetada: cada lista mostra quantos eventos a opção teria com os DEMAIS filtros aplicados
+  function updateFacetCounts(f) {
+    const ce = Core.countBy(Core.filter(ALL, f, 'exc'), r => r.excecao);
+    $$('#excList label').forEach(l => { const v = ce.get(l.dataset.val) || 0; l.querySelector('em').textContent = nf.format(v); l.style.opacity = v ? 1 : .45; });
+    const cc = Core.countBy(Core.filter(ALL, f, 'cli'), r => r.cliente);
+    $$('#cliList label').forEach(l => { const v = cc.get(l.dataset.val) || 0; l.querySelector('em').textContent = nf.format(v); l.style.opacity = v ? 1 : .45; });
+  }
+  function syncChecks(kind) { $$(`#${kind}List label`).forEach(l => l.querySelector('input').checked = st[kind].has(l.dataset.val)); }
+  $$('[data-all]').forEach(b => b.onclick = () => { const k = b.dataset.all; st[k] = new Set(k === 'exc' ? ALL_EXC : ALL_CLI); syncChecks(k); render(true); });
+  $$('[data-none]').forEach(b => b.onclick = () => { const k = b.dataset.none; st[k] = new Set(); syncChecks(k); render(true); });
+  const searchList = (inp, box) => $(inp).oninput = e => { const q = Core.strip(e.target.value);
+    $$(box + ' label').forEach(l => l.classList.toggle('hidden', !!q && !l.dataset.search.includes(q))); };
+  searchList('#excSearch', '#excList'); searchList('#cliSearch', '#cliList');
+  $('#btnReset').onclick = () => { if (ALL.length) init(META.res, META.fname); };
+
+  function currentFilter() {
+    return { from: st.from, to: st.to, classes: st.classes.size === 3 ? null : st.classes,
+      excecoes: st.exc.size === ALL_EXC.size ? null : st.exc, clientes: st.cli.size === ALL_CLI.size ? null : st.cli,
+      placa: st.placa, semDup: st.semDup };
+  }
+
+  /* ---------- render ---------- */
+  function render(fit) {
+    syncPresets();
+    const f = currentFilter();
+    FILT = Core.filter(ALL, f);
+    AGG = Core.aggregate(FILT);
+    const parts = [];
+    if (f.from || f.to) parts.push(`período <b>${fmtDia(f.from) || 'início'} a ${fmtDia(f.to) || 'fim'}</b>`);
+    if (f.classes) parts.push(`classes <b>${[...f.classes].map(k => CLASS_LABEL[k]).join(', ') || 'nenhuma'}</b>`);
+    if (f.excecoes) parts.push(`<b>${f.excecoes.size}</b> de ${ALL_EXC.size} exceções`);
+    if (f.clientes) parts.push(f.clientes.size === 1 ? `cliente <b>${esc([...f.clientes][0])}</b>` : `<b>${f.clientes.size}</b> clientes`);
+    if (f.placa) parts.push(`placa contém <b>${esc(Core.plateKey(f.placa))}</b>`);
+    if (f.semDup) parts.push('<b>sem duplicados</b>');
+    const bd = $('#filterBadge'); bd.textContent = parts.length; bd.classList.toggle('hidden', !parts.length);
+    $('#activeFilters').innerHTML = parts.length ? 'Filtrando por ' + parts.join(' · ') : 'Sem filtros: mostrando a base inteira';
+    $('#excCount').textContent = st.exc.size + ' de ' + ALL_EXC.size;
+    $('#cliCount').textContent = st.cli.size + ' de ' + ALL_CLI.size;
+    updateFacetCounts(f);
+    renderKpis(); renderClientes(); renderTipo(); renderMes(); renderCS(); renderLocais(); renderPlacas(); renderMot(); renderMap(fit); renderQuality();
+  }
+
+  function renderKpis() {
+    const a = AGG;
+    const k = [
+      ['hero', nf.format(a.n), 'eventos no filtro' + (ALL.length !== a.n ? ` (de ${nf.format(ALL.length)})` : '')],
+      ['', nf.format(a.EQ), 'equipamento'], ['', nf.format(a.FV), 'fim de viagem'], ['', nf.format(a.CS), 'contextos suspeitos'],
+      ['', nf.format(a.nClientes), 'clientes com eventos'], ['', a.n ? pf(a.top3pct) : '–', 'nos 3 maiores clientes']];
+    $('#kpis').innerHTML = k.map(([c, v, l]) => `<div class="kpi ${c}"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+  }
+
+  function sortRows(rows, key, cols) {
+    const s = st.sort[key]; if (!s) return rows;
+    const col = cols.find(c => c.k === s.k); if (!col) return rows;
+    const val = col.v || (r => r[s.k]);
+    return [...rows].sort((a, b) => { const x = val(a), y = val(b); const r = typeof x === 'number' ? x - y : String(x).localeCompare(String(y), 'pt-BR'); return s.dir === 'asc' ? r : -r; });
+  }
+  // limit aplicado DEPOIS da ordenação, para ordenar a lista inteira
+  function table(el, key, cols, allRows, opts = {}) {
+    const rows = sortRows(allRows, key, cols).slice(0, opts.limit || allRows.length);
+    const s = st.sort[key] || {};
+    const head = '<thead><tr>' + cols.map(c => `<th data-k="${c.k}" class="${c.num ? 'num ' : ''}${s.k === c.k ? s.dir : ''}">${c.h}</th>`).join('') + '</tr></thead>';
+    const body = '<tbody>' + (rows.length ? rows.map((r, i) => `<tr class="${opts.click ? 'click ' : ''}${opts.sel && opts.sel(r) ? 'sel' : ''}" data-i="${i}">` +
+      cols.map(c => `<td class="${c.num ? 'num' : ''} ${c.cls || ''}">${c.f ? c.f(r, i) : esc(r[c.k])}</td>`).join('') + '</tr>').join('')
+      : `<tr><td colspan="${cols.length}" style="text-align:center;padding:24px;color:${C.muted}">Nenhum evento com esses filtros</td></tr>`) + '</tbody>';
+    el.innerHTML = head + body;
+    el.querySelectorAll('th').forEach(th => th.onclick = () => { const k = th.dataset.k; const cur = st.sort[key];
+      st.sort[key] = { k, dir: cur && cur.k === k && cur.dir === 'desc' ? 'asc' : 'desc' }; render(); });
+    if (opts.click) el.querySelectorAll('tbody tr[data-i]').forEach(tr => tr.onclick = () => opts.click(rows[+tr.dataset.i]));
+  }
+
+  function spark(vals) {
+    if (!vals.length) return '';
+    const w = 70, h = 20, mx = Math.max(...vals, 1);
+    const p = vals.map((v, i) => [(i / Math.max(vals.length - 1, 1)) * (w - 4) + 2, h - 2 - (v / mx) * (h - 4)]);
+    const last = p[p.length - 1];
+    return `<svg width="${w}" height="${h}" aria-hidden="true"><polyline points="${p.map(x => x.join(',')).join(' ')}" fill="none" stroke="${C.indigo}" stroke-width="2"/><circle cx="${last[0]}" cy="${last[1]}" r="2.5" fill="${C.navy}"/></svg>`;
+  }
+
+  function renderClientes() {
+    const rows = AGG.clientes, meses = AGG.meses, mx = rows[0]?.total || 1;
+    const onlyOne = st.cli.size === 1 ? [...st.cli][0] : null;
+    table($('#tblCli'), 'cli', [
+      { k: 'rank', h: '#', num: true },
+      { k: 'cliente', h: 'Cliente', cls: 'nowrap', f: r => `<span title="${esc(r.cliente)}">${esc(short(r.cliente))}</span>` },
+      { k: 'total', h: 'Total', num: true, f: r => `<b>${nf.format(r.total)}</b>` },
+      { k: 'bar', h: '', v: r => r.total, cls: 'barcell', f: r => `<div class="bar" style="width:${(r.total / mx) * 100}%"></div>` },
+      { k: 'pct', h: '%', num: true, f: r => pf(r.pct) },
+      { k: 'acum', h: '% acum.', num: true, f: r => pf(r.acum) },
+      { k: 'EQ', h: 'Equip.', num: true, f: r => nf.format(r.EQ) },
+      { k: 'FV', h: 'FV', num: true, f: r => nf.format(r.FV) },
+      { k: 'CS', h: 'CS', num: true, f: r => nf.format(r.CS) },
+      { k: 'trend', h: 'Mês a mês', v: r => r.total, f: r => `<span title="${meses.map(m => mesLabel(m) + ': ' + (r.m[m] || 0)).join(' | ')}">${spark(meses.map(m => r.m[m] || 0))}</span>` }
+    ], rows, { click: r => { st.cli = onlyOne === r.cliente ? new Set(ALL_CLI) : new Set([r.cliente]); syncChecks('cli'); render(true); }, sel: r => onlyOne === r.cliente });
+  }
+
+  function mkChart(id, cfg) { if (charts[id]) charts[id].destroy(); charts[id] = new Chart(document.getElementById(id), cfg); }
+  const baseOpts = (extra = {}) => Object.assign({ responsive: true, maintainAspectRatio: false, animation: { duration: 250 },
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + nf.format(c.parsed.x ?? c.parsed.y) } } } }, extra);
+  function labelsPlugin(axis) {
+    return { id: 'vl', afterDatasetsDraw(ch) { const { ctx } = ch; ctx.save(); ctx.font = "600 11px Barlow, Arial"; ctx.fillStyle = C.ink;
+      ch.data.datasets.forEach((ds, di) => { const meta = ch.getDatasetMeta(di); if (meta.hidden) return; meta.data.forEach((el, i) => { const v = ds.data[i]; if (!v) return;
+        if (axis === 'x') { ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(nf.format(v), el.x + 5, el.y); }
+        else { ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(nf.format(v), el.x, el.y - 3); } }); }); ctx.restore(); } };
+  }
+
+  function renderTipo() {
+    const cnt = AGG.tipos;
+    const t = TIPOS.filter(x => cnt.get(x)).sort((a, b) => cnt.get(b) - cnt.get(a));
+    mkChart('chTipo', { type: 'bar', data: { labels: t, datasets: [{ data: t.map(x => cnt.get(x)), backgroundColor: t.map(x => CLASS_COLOR[tipoClasse(x)]), borderRadius: 4, barPercentage: .8 }] },
+      options: baseOpts({ indexAxis: 'y', layout: { padding: { right: 40 } }, scales: { x: { grid: { color: C.line } }, y: { grid: { display: false }, ticks: { color: C.ink, font: { size: 13 } } } } }),
+      plugins: [labelsPlugin('x')] });
+  }
+
+  function renderMes() {
+    const mc = AGG.mesClasse;
+    const ds = evoMode === 'classe'
+      ? ['EQ', 'FV', 'CS'].map(k => ({ label: CLASS_LABEL[k], data: mc.map(o => o[k]), backgroundColor: CLASS_COLOR[k], borderRadius: 3 }))
+      : [{ label: 'Total', data: mc.map(o => o.total), backgroundColor: C.navy, borderRadius: 3 }];
+    const lastM = META.max ? META.max.slice(0, 7) : '';
+    const partial = META.max && +META.max.slice(8) < new Date(+META.max.slice(0, 4), +META.max.slice(5, 7), 0).getDate();
+    mkChart('chMes', { type: 'bar', data: { labels: mc.map(o => mesLabel(o.mes) + (partial && o.mes === lastM ? '*' : '')), datasets: ds },
+      options: baseOpts({ plugins: { legend: { display: evoMode === 'classe', position: 'bottom', labels: { boxWidth: 12 } },
+        tooltip: { mode: 'index', intersect: false, callbacks: { footer: it => 'Total: ' + nf.format(it.reduce((a, b) => a + b.parsed.y, 0)) } } },
+        scales: { x: { grid: { display: false }, ticks: { color: C.ink } }, y: { grid: { color: C.line } } } }), plugins: [labelsPlugin('y')] });
+  }
+  $$('#evoMode button').forEach(b => b.onclick = () => { evoMode = b.dataset.v; $$('#evoMode button').forEach(x => x.classList.toggle('on', x === b)); renderMes(); });
+
+  function renderCS() {
+    const cnt = AGG.csTipos;
+    const t = [...cnt.keys()].sort((a, b) => cnt.get(b) - cnt.get(a));
+    mkChart('chCS', { type: 'bar', data: { labels: t.length ? t : ['Sem CS no filtro'], datasets: [{ data: t.map(x => cnt.get(x)), backgroundColor: C.neon, borderColor: C.navy, borderWidth: 1, borderRadius: 4, barPercentage: .7 }] },
+      options: baseOpts({ indexAxis: 'y', layout: { padding: { right: 40 } }, scales: { x: { grid: { color: C.line } }, y: { grid: { display: false }, ticks: { color: C.ink, font: { size: 13 } } } } }), plugins: [labelsPlugin('x')] });
+  }
+
+  function tagList(m, lim = 3) {
+    return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, lim).map(([t, v]) => `<span class="tag ${tipoClasse(t) === 'CS' ? 'cs' : tipoClasse(t) === 'FV' ? 'fv' : ''}">${esc(t)} ${v}</span>`).join('');
+  }
+
+  function renderLocais() {
+    const rows = AGG.locais;
+    table($('#tblLoc'), 'loc', [
+      { k: 'local', h: 'Local', f: r => esc(r.local) },
+      { k: 'total', h: 'Eventos', num: true, f: r => `<b>${nf.format(r.total)}</b>` },
+      { k: 'nPl', h: 'Placas', num: true },
+      { k: 'nCli', h: 'Clientes', num: true },
+      { k: 'tipos', h: 'Tipos', v: r => r.total, f: r => tagList(r.tipos) }
+    ], rows, { limit: st.more.loc, click: r => { if (r.lat != null && map) { map.flyTo([r.lat, r.lon], 15, { duration: .8 }); document.getElementById('map').scrollIntoView({ behavior: 'smooth', block: 'center' }); } } });
+    moreBtn('loc', rows.length);
+  }
+
+  function renderPlacas() {
+    const rows = AGG.placas;
+    table($('#tblPlaca'), 'placa', [
+      { k: 'placa', h: 'Placa', f: r => `<b>${esc(r.placa)}</b>` },
+      { k: 'cliente', h: 'Cliente', f: r => `<span title="${esc(r.cliente)}">${esc(short(r.cliente).slice(0, 22))}</span>` },
+      { k: 'total', h: 'Eventos', num: true, f: r => `<b>${nf.format(r.total)}</b>` },
+      { k: 'nViagens', h: 'Viagens', num: true },
+      { k: 'porViagem', h: 'Por viagem', num: true, f: r => r.porViagem.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) },
+      { k: 'tecnologia', h: 'Tecnologia' },
+      { k: 'tipos', h: 'Tipos', v: r => r.total, f: r => tagList(r.tipos) }
+    ], rows, { limit: st.more.placa, click: r => { $('#plateSearch').value = r.placa; st.placa = r.placa; render(true); } });
+    moreBtn('placa', rows.length);
+  }
+
+  function renderMot() {
+    const rows = AGG.motoristas;
+    table($('#tblMot'), 'mot', [
+      { k: 'motorista', h: 'Motorista', f: r => esc(r.motorista) },
+      { k: 'cliente', h: 'Cliente', f: r => `<span title="${esc(r.cliente)}">${esc(short(r.cliente).slice(0, 20))}</span>` },
+      { k: 'total', h: 'FV', num: true, f: r => `<b>${nf.format(r.total)}</b>` },
+      { k: 'topLocal', h: 'Local mais frequente', f: r => `<span style="font-size:12px">${esc(r.topLocal)} (${r.topLocalN})</span>` }
+    ], rows, { limit: st.more.mot });
+    moreBtn('mot', rows.length);
+  }
+  function moreBtn(k, total) { const b = $(`[data-more="${k}"]`); b.classList.toggle('hidden', total <= 15);
+    b.textContent = st.more[k] >= total ? 'Mostrar menos' : `Mostrar mais (${nf.format(total)} no total)`;
+    b.onclick = () => { st.more[k] = st.more[k] >= total ? 15 : st.more[k] + 35; render(); }; }
+
+  /* ---------- mapa ---------- */
+  // provedores sem chave de API; se um falhar, troca sozinho para o próximo
+  const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
+  const esri = (svc, ref) => ({ url: ESRI + svc + '/MapServer/tile/{z}/{y}/{x}', ref: ref && ESRI + ref + '/MapServer/tile/{z}/{y}/{x}', attr: 'Tiles &copy; Esri', max: 16 });
+  const TILES = {
+    dark: [esri('Canvas/World_Dark_Gray_Base', 'Canvas/World_Dark_Gray_Reference'), { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', attr: '&copy; OpenStreetMap &copy; CARTO', max: 19, sub: 'abcd' }],
+    light: [esri('Canvas/World_Light_Gray_Base', 'Canvas/World_Light_Gray_Reference'), { url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', attr: '&copy; OpenStreetMap', max: 19, sub: 'abc' }],
+    ruas: [esri('World_Street_Map'), { url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', attr: '&copy; OpenStreetMap', max: 19, sub: 'abc' }],
+    sat: [esri('World_Imagery', 'Reference/World_Boundaries_and_Places'), esri('World_Imagery')]
+  };
+  let refLayer, tileTry = 0;
+  function initMap() { map = L.map('map', { preferCanvas: true }).setView([-15.8, -50], 4); setBase('dark'); pts = L.layerGroup(); }
+  function setBase(k, attempt = 0) {
+    [baseLayer, refLayer].forEach(l => l && map.removeLayer(l)); refLayer = null;
+    const list = TILES[k], t = list[Math.min(attempt, list.length - 1)];
+    mapBase = k; tileTry = attempt;
+    let ok = 0, err = 0;
+    baseLayer = L.tileLayer(t.url, { attribution: t.attr, maxZoom: 19, maxNativeZoom: t.max, subdomains: t.sub || 'abc' })
+      .on('tileload', () => ok++)
+      .on('tileerror', () => { err++; if (!ok && err >= 4 && attempt + 1 < list.length && mapBase === k && tileTry === attempt) setBase(k, attempt + 1); })
+      .addTo(map);
+    baseLayer.bringToBack();
+    if (t.ref) refLayer = L.tileLayer(t.ref, { maxZoom: 19, maxNativeZoom: t.max, pane: 'overlayPane', opacity: .9 }).addTo(map);
+    if (AGG) renderMap(false);
+  }
+  $$('#mapBase button').forEach(b => b.onclick = () => { $$('#mapBase button').forEach(x => x.classList.toggle('on', x === b)); setBase(b.dataset.v); });
+  $$('#mapMode button').forEach(b => b.onclick = () => { mapMode = b.dataset.v; $$('#mapMode button').forEach(x => x.classList.toggle('on', x === b)); renderMap(false); });
+  $('#heatRadius').oninput = () => renderMap(false);
+
+  function renderMap(fit) {
+    if (!map) return;
+    const geo = FILT.filter(r => r.lat != null);
+    if (heat) { map.removeLayer(heat); heat = null; }
+    pts.clearLayers(); if (map.hasLayer(pts)) map.removeLayer(pts);
+    const rad = +$('#heatRadius').value;
+    if (mapMode !== 'points' && geo.length)
+      heat = L.heatLayer(geo.map(r => [r.lat, r.lon, 1]), { radius: rad, blur: Math.round(rad * .8), maxZoom: 11, minOpacity: .35,
+        gradient: { .15: '#2C28A8', .4: '#6C69D9', .7: '#9CFF9C', 1: '#00FF00' } }).addTo(map);
+    const locs = AGG.locais.filter(o => o.lat != null), mx = Math.max(1, ...locs.map(o => o.nc));
+    if (mapMode !== 'heat') {
+      [...locs].sort((a, b) => a.nc - b.nc).forEach(o => {
+        const main = tipoClasse([...o.tipos.entries()].sort((a, b) => b[1] - a[1])[0][0]);
+        const darkBg = mapBase === 'dark' || mapBase === 'sat';
+        const fill = main === 'EQ' && darkBg ? C.indigo : CLASS_COLOR[main];
+        L.circleMarker([o.lat, o.lon], { radius: 4 + Math.sqrt(o.nc / mx) * 18, color: darkBg ? C.neon : C.navy, weight: 1, fillColor: fill, fillOpacity: .75 })
+          .bindPopup(`<b>${esc(o.local)}</b><br>${nf.format(o.total)} eventos<br>${[...o.tipos.entries()].sort((a, b) => b[1] - a[1]).map(([t, v]) => esc(t) + ': ' + v).join('<br>')}<br><span style="color:${C.muted}">${[...o.cli.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c, v]) => esc(short(c)) + ' (' + v + ')').join(', ')}</span>`)
+          .addTo(pts);
+      });
+      pts.addTo(map);
+    }
+    $('#mapSub').textContent = `${nf.format(geo.length)} eventos georreferenciados em ${nf.format(locs.length)} locais`;
+    $('#mapNote').textContent = FILT.length - geo.length ? `${nf.format(FILT.length - geo.length)} eventos sem coordenada ficaram fora do mapa` : '';
+    if (fit && geo.length) map.fitBounds(L.latLngBounds(geo.map(r => [r.lat, r.lon])).pad(.08), { maxZoom: 12 });
+    setTimeout(() => map.invalidateSize(), 50);
+  }
+
+  function renderQuality() {
+    const s = META.stats;
+    $('#quality').innerHTML = [
+      ['Arquivo', esc(META.fname) + (META.sheet ? ' / aba ' + esc(META.sheet) : '')],
+      ['Linhas com conteúdo', nf.format(s.lidas)], ['Eventos válidos', nf.format(s.validas)],
+      ['Descartadas (sem cliente/exceção)', nf.format(s.descartadas)], ['Sem data', nf.format(s.semData)], ['Sem coordenada', nf.format(s.semCoord)],
+      ['Classe deduzida', nf.format(s.classeDeduzida)], ['Duplicados exatos', nf.format(s.duplicadas)],
+      ['Período', fmtDia(META.min) + ' a ' + fmtDia(META.max)],
+      ['Clientes', nf.format(ALL_CLI.size)], ['Tipos de exceção', nf.format(ALL_EXC.size)]
+    ].map(([k, v]) => `<span>${k}: <b>${v}</b></span>`).join('') +
+      (s.duplicadas ? `<label style="display:flex;gap:6px;align-items:center;width:100%;margin-top:6px;color:${C.ink}"><input type="checkbox" id="chkDup" ${st.semDup ? 'checked' : ''} style="accent-color:${C.navy}"> Ignorar duplicados exatos (mesma viagem, exceção, data e placa)</label>` : '');
+    const cd = $('#chkDup'); if (cd) cd.onchange = () => { st.semDup = cd.checked; render(true); };
+  }
+
+  /* ---------- exportação ---------- */
+  $('#btnExport').onclick = () => {
+    const cols = ['cliente', 'filial', 'placa', 'carreta', 'motorista', 'excecao', 'classe', 'tipo', 'data', 'local', 'referencia', 'lat', 'lon', 'viagem', 'tecnologia'];
+    const q = v => { v = v instanceof Date ? v.toLocaleString('pt-BR') : (v ?? ''); v = String(v); return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    const lines = [cols.join(';'), ...FILT.map(r => cols.map(c => q(c === 'classe' ? CLASS_LABEL[r.classe] : (c === 'lat' || c === 'lon') ? (r[c] == null ? '' : String(r[c]).replace('.', ',')) : r[c])).join(';'))];
+    const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'excecoes_filtradas.csv' });
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+})();
+</script>
+</body>
+</html>
