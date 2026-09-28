@@ -21,7 +21,8 @@
   --f:'Barlow',Arial,sans-serif; --fc:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
 }
 *{box-sizing:border-box}
-html,body{margin:0;height:100%}
+html,body{margin:0}
+body{min-height:100vh}
 body{font-family:var(--f);color:var(--ink);background:var(--bg);font-size:14px;line-height:1.45}
 button,input,select{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--indigo);outline-offset:2px}
@@ -44,7 +45,7 @@ button,input,select{font:inherit;color:inherit}
 .app{display:grid;grid-template-columns:var(--side) 1fr;min-height:calc(100vh - var(--top));transition:grid-template-columns .2s ease}
 .app.collapsed{--side:0px}
 aside{background:var(--panel);border-right:1px solid var(--line);position:sticky;top:var(--top);height:calc(100vh - var(--top));
-  display:flex;flex-direction:column;gap:12px;padding:12px 14px;overflow:hidden;min-width:0}
+  display:flex;flex-direction:column;gap:12px;padding:12px 14px;overflow:visible;min-width:0;z-index:950}
 .app.collapsed aside{padding:0;border:0;visibility:hidden}
 main{padding:18px 24px 48px;min-width:0}
 
@@ -56,7 +57,6 @@ main{padding:18px 24px 48px;min-width:0}
 
 /* filtros compactos */
 .fgroup{flex-shrink:0;min-height:0}
-.fgroup.grow{flex:1 1 0;display:flex;flex-direction:column;min-height:90px}
 .fgroup h3{font-family:var(--fc);font-size:15px;margin:0 0 5px;display:flex;gap:8px;align-items:center;color:var(--navy)}
 .fgroup h3 small{font-family:var(--f);font-size:11.5px;color:var(--muted);font-weight:500}
 .fgroup h3 .sp{margin-left:auto}
@@ -65,11 +65,47 @@ input[type=date],input[type=search]{width:100%;border:1px solid var(--line);bord
 .presets{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
 .chip{border:1px solid var(--line);background:var(--soft);border-radius:14px;padding:1px 9px;font-size:11.5px;line-height:1.6;cursor:pointer}
 .chip.on{background:var(--navy);color:var(--neon);border-color:var(--navy)}
-.checklist{border:1px solid var(--line);border-radius:6px;overflow:auto;margin-top:5px;background:var(--soft);flex:1 1 0;min-height:0}
+.checklist{border:1px solid var(--line);border-radius:6px;overflow:auto;background:var(--soft);flex:1 1 0;min-height:0}
+/* acordeão de listas */
+.acc{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+.acc-sec{border:1px solid var(--line);border-radius:8px;display:flex;flex-direction:column;min-height:0;flex-shrink:0;background:var(--panel)}
+.acc-sec.open{border-color:var(--navy);box-shadow:inset 3px 0 0 var(--neon)}
+.acc-head{display:flex;align-items:center;gap:8px;padding:7px 10px;background:none;border:0;width:100%;text-align:left;cursor:pointer;border-radius:8px}
+.acc-head:hover{background:var(--soft)}
+.acc-head .ttl{font-family:var(--fc);font-weight:700;font-size:15px;color:var(--navy);white-space:nowrap}
+.acc-head .sum{font-size:11.5px;color:var(--muted);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acc-head .cnt{font-size:11px;font-weight:600;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:0 7px;white-space:nowrap}
+.acc-sec.partial .acc-head .cnt{background:var(--navy);color:var(--neon);border-color:var(--navy)}
+.acc-head .chev{width:14px;height:14px;flex-shrink:0;transition:transform .15s;color:var(--muted)}
+.acc-head .chev{transform:rotate(-90deg)}
+.acc-sec.open .acc-head .chev{transform:rotate(90deg);color:var(--navy)}
+.acc-body{display:none;flex-direction:column;gap:8px;position:fixed;z-index:900;top:var(--top);bottom:0;left:var(--side);width:min(620px,48vw);
+  background:var(--panel);border-right:1px solid var(--line);box-shadow:12px 0 32px rgba(2,0,57,.18);padding:16px 18px}
+.acc-sec.open .acc-body{display:flex;animation:flyin .14s ease-out}
+@keyframes flyin{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
+.fly-head{display:flex;align-items:center;gap:10px}
+.fly-head h4{font-family:var(--fc);font-size:22px;margin:0;color:var(--navy)}
+.fly-head .cnt{font-size:12px;color:var(--muted)}
+.fly-close{margin-left:auto;border:1px solid var(--line);background:var(--soft);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;color:var(--navy)}
+.fly-close:hover{border-color:var(--indigo)}
+.acc-body input[type=search]{height:34px;font-size:13.5px;padding:6px 10px}
+.acc-body .acc-tools{font-size:12.5px}
+.acc-body .linkbtns{font-size:12.5px;gap:14px}
+.acc-body .checklist{border-radius:8px}
+.acc-body .checklist label{padding:5px 12px;font-size:13px;gap:10px;border-bottom:1px solid #E6E8F2}
+.acc-body .checklist label .t{white-space:normal}
+.acc-body .checklist label small{font-size:11.5px;white-space:normal}
+.acc-body .checklist label em{font-size:12px}
+.acc-body .checklist .grp{font-size:14px;padding:7px 12px 5px}
+.fly-foot{display:flex;justify-content:space-between;align-items:center;gap:14px;font-size:11.5px;color:var(--muted)}
+.fly-foot .btn.fly-close{flex-shrink:0;width:auto;height:auto;padding:7px 18px;margin:0;font-size:13px}
+.acc-tools{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--muted)}
+.checklist label .t{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.checklist label small{display:block;font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.checklist label>span{flex:1;min-width:0}
 .checklist .grp{font-family:var(--fc);font-weight:600;font-size:12.5px;padding:4px 8px 2px;color:var(--navy);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#E9EBF5;z-index:1}
 .checklist label{display:flex;gap:6px;align-items:flex-start;padding:2px 8px;font-size:12px;line-height:1.35;cursor:pointer}
 .checklist label:hover{background:#E6E8F4}
-.checklist label span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .checklist label em{margin-left:auto;font-style:normal;color:var(--muted);font-size:11px;padding-left:6px}
 .checklist input{accent-color:var(--navy);margin:2px 0 0;flex-shrink:0}
 .linkbtns{display:flex;gap:8px;font-size:11.5px}
@@ -120,7 +156,7 @@ tbody tr.click:hover{background:#E6E8F4}
 tbody tr.sel{background:#DCDBF5 !important}
 .bar{height:8px;border-radius:4px;background:var(--indigo);min-width:2px}
 .barcell{width:70px;min-width:50px}
-.nowrap{white-space:nowrap;max-width:230px;overflow:hidden;text-overflow:ellipsis}
+.nowrap{white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}
 .tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:10px;background:#E6E8F4;color:var(--navy);margin:1px 3px 1px 0;white-space:nowrap}
 .tag.cs{background:var(--navy);color:var(--neon)}
 .tag.fv{background:#E4E3FA}
@@ -183,16 +219,37 @@ input[type=range]{accent-color:var(--navy);width:110px;vertical-align:middle}
     <input type="search" id="plateSearch" placeholder="Ex.: BRY2E52">
   </div>
 
-  <div class="fgroup grow" style="flex-grow:1.25">
-    <h3>Exceções <small id="excCount"></small><span class="linkbtns sp"><button data-all="exc">Todas</button><button data-none="exc">Nenhuma</button></span></h3>
-    <input type="search" id="excSearch" placeholder="Buscar exceção">
-    <div class="checklist" id="excList"></div>
-  </div>
-
-  <div class="fgroup grow">
-    <h3>Clientes <small id="cliCount"></small><span class="linkbtns sp"><button data-all="cli">Todos</button><button data-none="cli">Nenhum</button></span></h3>
-    <input type="search" id="cliSearch" placeholder="Buscar cliente">
-    <div class="checklist" id="cliList"></div>
+  <div class="acc" id="acc">
+    <section class="acc-sec" data-sec="exc">
+      <button class="acc-head" aria-expanded="false"><span class="ttl">Exceções</span><span class="sum" id="excSum"></span><span class="cnt" id="excCount"></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+      <div class="acc-body" role="dialog" aria-label="Filtro de exceções">
+        <div class="fly-head"><h4>Exceções</h4><span class="cnt" id="excFlyCnt"></span><button class="fly-close" title="Fechar (Esc)" aria-label="Fechar">✕</button></div>
+        <input type="search" id="excSearch" placeholder="Buscar exceção">
+        <div class="acc-tools"><span id="excHint">&nbsp;</span><span class="linkbtns"><button data-all="exc">Marcar todos</button><button data-none="exc">Desmarcar</button></span></div>
+        <div class="checklist" id="excList"></div>
+        <div class="fly-foot"><span>O filtro é aplicado na hora. Com busca ativa, marcar e desmarcar valem só para os itens encontrados.</span><button class="btn primary fly-close">Concluir</button></div>
+      </div>
+    </section>
+    <section class="acc-sec" data-sec="cli">
+      <button class="acc-head" aria-expanded="false"><span class="ttl">Clientes</span><span class="sum" id="cliSum"></span><span class="cnt" id="cliCount"></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+      <div class="acc-body" role="dialog" aria-label="Filtro de clientes">
+        <div class="fly-head"><h4>Clientes</h4><span class="cnt" id="cliFlyCnt"></span><button class="fly-close" title="Fechar (Esc)" aria-label="Fechar">✕</button></div>
+        <input type="search" id="cliSearch" placeholder="Buscar cliente">
+        <div class="acc-tools"><span id="cliHint">&nbsp;</span><span class="linkbtns"><button data-all="cli">Marcar todos</button><button data-none="cli">Desmarcar</button></span></div>
+        <div class="checklist" id="cliList"></div>
+        <div class="fly-foot"><span>O filtro é aplicado na hora. Com busca ativa, marcar e desmarcar valem só para os itens encontrados.</span><button class="btn primary fly-close">Concluir</button></div>
+      </div>
+    </section>
+    <section class="acc-sec" data-sec="per">
+      <button class="acc-head" aria-expanded="false"><span class="ttl">Perfil de segurança</span><span class="sum" id="perSum"></span><span class="cnt" id="perCount"></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+      <div class="acc-body" role="dialog" aria-label="Filtro de perfil de segurança">
+        <div class="fly-head"><h4>Perfil de segurança</h4><span class="cnt" id="perFlyCnt"></span><button class="fly-close" title="Fechar (Esc)" aria-label="Fechar">✕</button></div>
+        <input type="search" id="perSearch" placeholder="Buscar perfil, cliente ou seguradora">
+        <div class="acc-tools"><span id="perHint">&nbsp;</span><span class="linkbtns"><button data-all="per">Marcar todos</button><button data-none="per">Desmarcar</button></span></div>
+        <div class="checklist" id="perList"></div>
+        <div class="fly-foot"><span>O filtro é aplicado na hora. Com busca ativa, marcar e desmarcar valem só para os itens encontrados.</span><button class="btn primary fly-close">Concluir</button></div>
+      </div>
+    </section>
   </div>
 
   <div class="side-foot">
@@ -281,6 +338,16 @@ input[type=range]{accent-color:var(--navy);width:110px;vertical-align:middle}
         <button class="btn small more" data-more="mot">Mostrar mais</button>
       </div>
       <div class="card">
+        <div class="card-head">
+          <div><h2>Perfis de segurança</h2><div class="sub">Eventos por regra de gerenciamento de risco. Clique para filtrar pelo perfil</div></div>
+        </div>
+        <div class="tbl-wrap"><table id="tblPer"></table></div>
+        <button class="btn small more" data-more="per">Mostrar mais</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
         <h2>Qualidade da leitura</h2>
         <div class="sub">Conferência da normalização do arquivo carregado</div>
         <div class="quality" id="quality"></div>
@@ -302,7 +369,7 @@ const Core = (() => {
   const COLS = {
     cliente: ['CLIENTE'], viagem: ['COD VIAGEM', 'CODIGO VIAGEM', 'COD. VIAGEM', 'VIAGEM'],
     filial: ['FILIAL'], placa: ['PLACA'], carreta: ['CARRETA'], motorista: ['MOTORISTA'],
-    tecnologia: ['TECNOLOGIA'], excecao: ['EXCECOES', 'EXCECAO'], data: ['DATA EXCECAO', 'DATA DA EXCECAO'],
+    tecnologia: ['TECNOLOGIA'], perfil: ['PERFIL', 'PERFIL DE SEGURANCA'], excecao: ['EXCECOES', 'EXCECAO'], data: ['DATA EXCECAO', 'DATA DA EXCECAO'],
     lat: ['LATITUDE', 'LAT'], lon: ['LONGITUDE', 'LON', 'LNG'], referencia: ['REFERENCIA', 'LOCAL'], classe: ['CLASSE']
   };
   const REQUIRED = ['cliente', 'excecao', 'data'];
@@ -399,7 +466,7 @@ const Core = (() => {
     const missing = REQUIRED.filter(k => idx[k] < 0);
     if (missing.length) throw new Error('Colunas obrigatórias ausentes: ' + missing.join(', ') + '.');
     const get = (r, k) => idx[k] >= 0 ? r[idx[k]] : null;
-    const disp = { cliente: new Map(), local: new Map(), excecao: new Map(), motorista: new Map() };   // chave -> 1º rótulo visto
+    const disp = { cliente: new Map(), local: new Map(), excecao: new Map(), motorista: new Map(), perfil: new Map() };   // chave -> 1º rótulo visto
     const label = (kind, raw) => { const k = kind === 'cliente' ? strip(raw).replace(/[.\s]+$/, '') : strip(raw);
       if (!disp[kind].has(k)) disp[kind].set(k, clean(raw)); return disp[kind].get(k); };
     const out = [], seen = new Set();
@@ -424,6 +491,7 @@ const Core = (() => {
         data, mes: data ? data.getFullYear() + '-' + pad(data.getMonth() + 1) : null,
         dia: data ? data.getFullYear() + '-' + pad(data.getMonth() + 1) + '-' + pad(data.getDate()) : null,
         placa, carreta: plateKey(get(r, 'carreta')), motorista: label('motorista', get(r, 'motorista')),
+        perfil: /^[-–—\s]*$/.test(clean(get(r, 'perfil'))) ? '(sem perfil)' : label('perfil', get(r, 'perfil')),
         filial: clean(get(r, 'filial')), viagem, tecnologia: clean(get(r, 'tecnologia')).toUpperCase(),
         lat, lon, referencia: clean(get(r, 'referencia')), local: label('local', localOf(get(r, 'referencia')))
       };
@@ -445,6 +513,7 @@ const Core = (() => {
       (!f.classes || f.classes.has(r.classe)) &&
       (skip === 'exc' || !f.excecoes || f.excecoes.has(r.excecao)) &&
       (skip === 'cli' || !f.clientes || f.clientes.has(r.cliente)) &&
+      (skip === 'per' || !f.perfis || f.perfis.has(r.perfil)) &&
       (!plate || r.placa.includes(plate) || r.carreta.includes(plate)));
   }
 
@@ -491,13 +560,19 @@ const Core = (() => {
       return Object.assign(o, { cliente: top(o.clis), topLocal: t ? t[0] : '', topLocalN: t ? t[1] : 0 }); })
       .sort((a, b) => b.total - a.total || a.motorista.localeCompare(b.motorista));
 
+    const gpf = new Map();
+    for (const r of F) { let o = gpf.get(r.perfil); if (!o) gpf.set(r.perfil, o = { perfil: r.perfil, total: 0, EQ: 0, FV: 0, CS: 0, clis: new Map() });
+      o.total++; o[r.classe]++; inc(o.clis, r.cliente); }
+    const perfis = [...gpf.values()].map(o => Object.assign(o, { cliente: top(o.clis), nCli: o.clis.size }))
+      .sort((a, b) => b.total - a.total || a.perfil.localeCompare(b.perfil));
+
     const top3 = clientes.slice(0, 3).reduce((a, c) => a + c.total, 0);
     return {
       n, EQ: byClasse.get('EQ') || 0, FV: byClasse.get('FV') || 0, CS: byClasse.get('CS') || 0,
       nClientes: clientes.length, top3pct: n ? top3 / n : 0,
       nPlacasEq: placas.length, geo: F.filter(r => r.lat != null).length,
       tipos: countBy(F, r => r.tipo), csTipos: countBy(F.filter(r => r.classe === 'CS'), r => r.csTipo),
-      meses, mesClasse, clientes, locais, placas, motoristas
+      meses, mesClasse, clientes, locais, placas, motoristas, perfis
     };
   }
 
@@ -524,8 +599,16 @@ if (typeof module !== 'undefined') module.exports = Core;
   const fmtDia = d => d ? d.split('-').reverse().join('/') : '';
   const short = c => c.replace(/\s+(LTDA\.?|S\/?A\.?|EIRELI|ME)$/i, '').replace(/TRANSPORTES? RODOVIARIOS? DE CARGAS?/i, 'TRANSP.').trim();
 
-  let ALL = [], META = {}, FILT = [], AGG = null, ALL_EXC = new Set(), ALL_CLI = new Set();
-  const st = { from: '', to: '', classes: new Set(['EQ', 'FV', 'CS']), exc: new Set(), cli: new Set(), placa: '', semDup: false, sort: {}, more: { loc: 15, placa: 15, mot: 15 } };
+  let ALL = [], META = {}, FILT = [], AGG = null;
+  // listas multisseleção: campo do registro e rótulos
+  const LISTS = {
+    exc: { field: 'excecao', noun: ['exceção', 'exceções'], fkey: 'excecoes' },
+    cli: { field: 'cliente', noun: ['cliente', 'clientes'], fkey: 'clientes' },
+    per: { field: 'perfil', noun: ['perfil', 'perfis'], fkey: 'perfis' }
+  };
+  const UNIV = { exc: new Set(), cli: new Set(), per: new Set() };
+  let ALL_EXC = UNIV.exc, ALL_CLI = UNIV.cli;
+  const st = { from: '', to: '', classes: new Set(['EQ', 'FV', 'CS']), exc: new Set(), cli: new Set(), per: new Set(), openSec: null, placa: '', semDup: false, sort: {}, more: { loc: 15, placa: 15, mot: 15, per: 15 } };
   const charts = {};
   let map, heat, pts, baseLayer, mapMode = 'heat', mapBase = 'dark', evoMode = 'classe';
 
@@ -541,7 +624,7 @@ if (typeof module !== 'undefined') module.exports = Core;
     try { localStorage.setItem('painelFiltros', open ? '1' : '0'); } catch (e) {}
     setTimeout(() => { if (map) map.invalidateSize(); Object.values(charts).forEach(c => c.resize()); }, 230);
   }
-  $('#btnHamb').onclick = () => setSide(app.classList.contains('collapsed'));
+  $('#btnHamb').onclick = () => { openSection && st.openSec && openSection(null); setSide(app.classList.contains('collapsed')); };
   document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); $('#btnHamb').click(); } });
   try { if (localStorage.getItem('painelFiltros') === '0') app.classList.add('collapsed'), $('#btnHamb').setAttribute('aria-expanded', 'false'); } catch (e) {}
 
@@ -589,18 +672,19 @@ if (typeof module !== 'undefined') module.exports = Core;
   /* ---------- init ---------- */
   function init(res, fname) {
     ALL = res.records;
-    ALL_EXC = new Set(ALL.map(r => r.excecao)); ALL_CLI = new Set(ALL.map(r => r.cliente));
+    for (const k in LISTS) UNIV[k] = new Set(ALL.map(r => r[LISTS[k].field]));
+    ALL_EXC = UNIV.exc; ALL_CLI = UNIV.cli;
     const dias = ALL.map(r => r.dia).filter(Boolean).sort();
     META = { res, stats: res.stats, sheet: res.sheet, fname, min: dias[0], max: dias[dias.length - 1],
       meses: [...new Set(ALL.map(r => r.mes).filter(Boolean))].sort() };
-    Object.assign(st, { from: '', to: '', placa: '', semDup: false, classes: new Set(['EQ', 'FV', 'CS']), exc: new Set(ALL_EXC), cli: new Set(ALL_CLI), sort: {}, more: { loc: 15, placa: 15, mot: 15 } });
+    Object.assign(st, { from: '', to: '', placa: '', semDup: false, classes: new Set(['EQ', 'FV', 'CS']), exc: new Set(UNIV.exc), cli: new Set(UNIV.cli), per: new Set(UNIV.per), sort: {}, more: { loc: 15, placa: 15, mot: 15, per: 15 } });
     $('#fileInfo').textContent = fname + ' · ' + nf.format(ALL.length) + ' eventos';
     $('#empty').classList.add('hidden'); $('#dash').classList.remove('hidden');
     $('#btnExport').disabled = false;
     $('#dtFrom').min = $('#dtTo').min = META.min || ''; $('#dtFrom').max = $('#dtTo').max = META.max || '';
-    $('#dtFrom').value = ''; $('#dtTo').value = ''; $('#plateSearch').value = ''; $('#excSearch').value = ''; $('#cliSearch').value = '';
+    $('#dtFrom').value = ''; $('#dtTo').value = ''; $('#plateSearch').value = ''; for (const k in LISTS) $('#' + k + 'Search').value = '';
     $('#periodInfo').textContent = META.min ? fmtDia(META.min) + ' a ' + fmtDia(META.max) : '';
-    buildPresets(); buildClassChips(); buildExcList(); buildCliList();
+    buildPresets(); buildClassChips(); for (const k in LISTS) buildList(k); openSection(null);
     if (!map) initMap();
     render(true);
   }
@@ -624,49 +708,90 @@ if (typeof module !== 'undefined') module.exports = Core;
       b.onclick = () => { st.classes.has(k) ? st.classes.delete(k) : st.classes.add(k); b.classList.toggle('on', st.classes.has(k)); render(true); }; box.appendChild(b); });
   }
   const sentence = s => { const t = s.toLowerCase(); return t.charAt(0).toUpperCase() + t.slice(1); };
-  function buildExcList() {
-    const cnt = Core.countBy(ALL, r => r.excecao), clsOf = new Map(ALL.map(r => [r.excecao, r.classe]));
-    const byClass = { EQ: [], FV: [], CS: [] };
-    [...cnt.keys()].sort((a, b) => cnt.get(b) - cnt.get(a)).forEach(e => byClass[clsOf.get(e)].push(e));
-    const box = $('#excList'); box.innerHTML = '';
-    Object.entries(byClass).forEach(([k, list]) => {
-      if (!list.length) return;
-      const g = document.createElement('div'); g.className = 'grp'; g.innerHTML = `<span>${CLASS_LABEL[k]}</span>`;
-      const tg = document.createElement('button'); tg.className = 'btn small'; tg.style.cssText = 'padding:0 8px;font-size:11px'; tg.textContent = 'só estes';
-      tg.onclick = () => { st.exc = new Set(list); syncChecks('exc'); render(true); }; g.appendChild(tg); box.appendChild(g);
-      list.forEach(e => box.appendChild(checkRow('exc', e, sentence(e))));
-    });
+
+  /* acordeão: uma lista aberta por vez, ocupando toda a altura livre */
+  function openSection(k) {
+    st.openSec = k;
+    $$('.acc-sec').forEach(sec => { const on = sec.dataset.sec === k; sec.classList.toggle('open', on); sec.querySelector('.acc-head').setAttribute('aria-expanded', on); });
+    if (k) setTimeout(() => $('#' + k + 'Search')?.focus({ preventScroll: true }), 30);
   }
-  function buildCliList() {
-    const cnt = Core.countBy(ALL, r => r.cliente);
-    const box = $('#cliList'); box.innerHTML = '';
-    [...cnt.keys()].sort((a, b) => cnt.get(b) - cnt.get(a)).forEach(c => box.appendChild(checkRow('cli', c, c)));
+  $$('.acc-head').forEach(h => h.onclick = () => { const k = h.parentElement.dataset.sec; openSection(st.openSec === k ? null : k); });
+  $$('.fly-close').forEach(b => b.onclick = e => { e.stopPropagation(); openSection(null); });
+  document.addEventListener('mousedown', e => { if (st.openSec && !e.target.closest('.acc-body') && !e.target.closest('.acc-head')) openSection(null); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && st.openSec && !(e.target.matches('input[type=search]') && e.target.value)) openSection(null); });
+
+  function buildList(kind) {
+    const L = LISTS[kind], cnt = Core.countBy(ALL, r => r[L.field]);
+    const box = $('#' + kind + 'List'); box.innerHTML = '';
+    const order = [...cnt.keys()].sort((a, b) => cnt.get(b) - cnt.get(a) || a.localeCompare(b));
+    if (kind === 'exc') {
+      const clsOf = new Map(ALL.map(r => [r.excecao, r.classe])), by = { EQ: [], FV: [], CS: [] };
+      order.forEach(e => by[clsOf.get(e)].push(e));
+      Object.entries(by).forEach(([c, list]) => {
+        if (!list.length) return;
+        const g = document.createElement('div'); g.className = 'grp'; g.innerHTML = `<span>${CLASS_LABEL[c]}</span>`;
+        const tg = document.createElement('button'); tg.className = 'btn small'; tg.style.cssText = 'padding:0 8px;font-size:11px'; tg.textContent = 'só estes';
+        tg.onclick = () => { st.exc = new Set(list); syncChecks('exc'); render(true); }; g.appendChild(tg); box.appendChild(g);
+        list.forEach(e => box.appendChild(checkRow('exc', e, sentence(e))));
+      });
+    } else if (kind === 'per') {
+      // perfil: mostra o cliente principal embaixo e busca também por cliente/seguradora
+      const cli = new Map(); for (const r of ALL) { const m = cli.get(r.perfil) || cli.set(r.perfil, new Map()).get(r.perfil); m.set(r.cliente, (m.get(r.cliente) || 0) + 1); }
+      order.forEach(p => { const cs = [...cli.get(p).entries()].sort((a, b) => b[1] - a[1]).map(x => short(x[0]));
+        box.appendChild(checkRow('per', p, p, cs.slice(0, 2).join(', ') + (cs.length > 2 ? ` +${cs.length - 2}` : ''))); });
+    } else order.forEach(c => box.appendChild(checkRow(kind, c, c)));
   }
-  function checkRow(kind, val, label) {
-    const l = document.createElement('label'); l.dataset.val = val; l.dataset.search = Core.strip(label);
+  function checkRow(kind, val, label, sub) {
+    const l = document.createElement('label'); l.dataset.val = val; l.dataset.search = Core.strip(label + ' ' + (sub || ''));
     const i = document.createElement('input'); i.type = 'checkbox'; i.checked = st[kind].has(val);
     i.onchange = () => { i.checked ? st[kind].add(val) : st[kind].delete(val); render(true); };
-    l.append(i, Object.assign(document.createElement('span'), { textContent: label }), document.createElement('em'));
-    l.title = val; return l;
+    const txt = document.createElement('span');
+    txt.append(Object.assign(document.createElement('span'), { className: 't', textContent: label }));
+    if (sub) txt.append(Object.assign(document.createElement('small'), { textContent: sub }));
+    l.append(i, txt, document.createElement('em'));
+    l.title = val + (sub ? '\n' + sub : ''); return l;
   }
-  // contagem facetada: cada lista mostra quantos eventos a opção teria com os DEMAIS filtros aplicados
+  // contagem facetada: quantos eventos cada opção teria com os DEMAIS filtros
   function updateFacetCounts(f) {
-    const ce = Core.countBy(Core.filter(ALL, f, 'exc'), r => r.excecao);
-    $$('#excList label').forEach(l => { const v = ce.get(l.dataset.val) || 0; l.querySelector('em').textContent = nf.format(v); l.style.opacity = v ? 1 : .45; });
-    const cc = Core.countBy(Core.filter(ALL, f, 'cli'), r => r.cliente);
-    $$('#cliList label').forEach(l => { const v = cc.get(l.dataset.val) || 0; l.querySelector('em').textContent = nf.format(v); l.style.opacity = v ? 1 : .45; });
+    for (const k in LISTS) {
+      const c = Core.countBy(Core.filter(ALL, f, k), r => r[LISTS[k].field]);
+      $$('#' + k + 'List label').forEach(l => { const v = c.get(l.dataset.val) || 0; l.querySelector('em').textContent = nf.format(v); l.style.opacity = v ? 1 : .45; });
+    }
+  }
+  function updateSummaries() {
+    for (const k in LISTS) {
+      const sel = st[k], tot = UNIV[k].size, L = LISTS[k], sec = $(`.acc-sec[data-sec="${k}"]`);
+      $('#' + k + 'Count').textContent = sel.size === tot ? 'todos' : sel.size + '/' + tot;
+      $('#' + k + 'FlyCnt').textContent = `${sel.size} de ${tot} marcados`;
+      sec.classList.toggle('partial', sel.size !== tot);
+      $('#' + k + 'Sum').textContent = sel.size === tot ? '' : !sel.size ? 'nenhum marcado'
+        : sel.size <= 2 ? [...sel].map(v => k === 'exc' ? sentence(v) : short(v)).join(', ') : sel.size + ' ' + L.noun[1];
+      $('#' + k + 'Sum').title = sel.size && sel.size !== tot ? [...sel].join('\n') : '';
+    }
   }
   function syncChecks(kind) { $$(`#${kind}List label`).forEach(l => l.querySelector('input').checked = st[kind].has(l.dataset.val)); }
-  $$('[data-all]').forEach(b => b.onclick = () => { const k = b.dataset.all; st[k] = new Set(k === 'exc' ? ALL_EXC : ALL_CLI); syncChecks(k); render(true); });
-  $$('[data-none]').forEach(b => b.onclick = () => { const k = b.dataset.none; st[k] = new Set(); syncChecks(k); render(true); });
-  const searchList = (inp, box) => $(inp).oninput = e => { const q = Core.strip(e.target.value);
-    $$(box + ' label').forEach(l => l.classList.toggle('hidden', !!q && !l.dataset.search.includes(q))); };
-  searchList('#excSearch', '#excList'); searchList('#cliSearch', '#cliList');
+  // com busca ativa, marcar/desmarcar age só nos itens visíveis
+  const visibleVals = k => $$(`#${k}List label:not(.hidden)`).map(l => l.dataset.val);
+  const searching = k => !!$('#' + k + 'Search').value.trim();
+  $$('[data-all]').forEach(b => b.onclick = () => { const k = b.dataset.all;
+    if (searching(k)) visibleVals(k).forEach(v => st[k].add(v)); else st[k] = new Set(UNIV[k]); syncChecks(k); render(true); });
+  $$('[data-none]').forEach(b => b.onclick = () => { const k = b.dataset.none;
+    if (searching(k)) visibleVals(k).forEach(v => st[k].delete(v)); else st[k] = new Set(); syncChecks(k); render(true); });
+  for (const k in LISTS) {
+    const inp = $('#' + k + 'Search');
+    inp.oninput = () => { const q = Core.strip(inp.value), words = q.split(' ').filter(Boolean);
+      let n = 0; $$(`#${k}List label`).forEach(l => { const hit = words.every(w => l.dataset.search.includes(w)); l.classList.toggle('hidden', !hit); if (hit) n++; });
+      $$(`#${k}List .grp`).forEach(g => { let el = g.nextElementSibling, any = false; while (el && el.tagName === 'LABEL') { if (!el.classList.contains('hidden')) any = true; el = el.nextElementSibling; } g.classList.toggle('hidden', !any); });
+      const bs = $(`.acc-sec[data-sec="${k}"]`).querySelectorAll('.linkbtns button');
+      bs[0].textContent = q ? 'Marcar visíveis' : 'Marcar todos'; bs[1].textContent = q ? 'Desmarcar visíveis' : 'Desmarcar';
+      $('#' + k + 'Hint').textContent = q ? `${n} encontrado${n === 1 ? '' : 's'}` : '\u00a0'; };
+    inp.onkeydown = e => { if (e.key === 'Escape' && inp.value) { e.stopPropagation(); inp.value = ''; inp.oninput(); } };
+  }
   $('#btnReset').onclick = () => { if (ALL.length) init(META.res, META.fname); };
 
   function currentFilter() {
     return { from: st.from, to: st.to, classes: st.classes.size === 3 ? null : st.classes,
-      excecoes: st.exc.size === ALL_EXC.size ? null : st.exc, clientes: st.cli.size === ALL_CLI.size ? null : st.cli,
+      excecoes: st.exc.size === UNIV.exc.size ? null : st.exc, clientes: st.cli.size === UNIV.cli.size ? null : st.cli, perfis: st.per.size === UNIV.per.size ? null : st.per,
       placa: st.placa, semDup: st.semDup };
   }
 
@@ -681,14 +806,13 @@ if (typeof module !== 'undefined') module.exports = Core;
     if (f.classes) parts.push(`classes <b>${[...f.classes].map(k => CLASS_LABEL[k]).join(', ') || 'nenhuma'}</b>`);
     if (f.excecoes) parts.push(`<b>${f.excecoes.size}</b> de ${ALL_EXC.size} exceções`);
     if (f.clientes) parts.push(f.clientes.size === 1 ? `cliente <b>${esc([...f.clientes][0])}</b>` : `<b>${f.clientes.size}</b> clientes`);
+    if (f.perfis) parts.push(f.perfis.size === 1 ? `perfil <b>${esc([...f.perfis][0])}</b>` : `<b>${f.perfis.size}</b> perfis`);
     if (f.placa) parts.push(`placa contém <b>${esc(Core.plateKey(f.placa))}</b>`);
     if (f.semDup) parts.push('<b>sem duplicados</b>');
     const bd = $('#filterBadge'); bd.textContent = parts.length; bd.classList.toggle('hidden', !parts.length);
     $('#activeFilters').innerHTML = parts.length ? 'Filtrando por ' + parts.join(' · ') : 'Sem filtros: mostrando a base inteira';
-    $('#excCount').textContent = st.exc.size + ' de ' + ALL_EXC.size;
-    $('#cliCount').textContent = st.cli.size + ' de ' + ALL_CLI.size;
-    updateFacetCounts(f);
-    renderKpis(); renderClientes(); renderTipo(); renderMes(); renderCS(); renderLocais(); renderPlacas(); renderMot(); renderMap(fit); renderQuality();
+    updateSummaries(); updateFacetCounts(f);
+    renderKpis(); renderClientes(); renderTipo(); renderMes(); renderCS(); renderLocais(); renderPlacas(); renderMot(); renderPerfis(); renderMap(fit); renderQuality();
   }
 
   function renderKpis() {
@@ -824,6 +948,19 @@ if (typeof module !== 'undefined') module.exports = Core;
     ], rows, { limit: st.more.mot });
     moreBtn('mot', rows.length);
   }
+  function renderPerfis() {
+    const rows = AGG.perfis, mx = rows[0]?.total || 1, only = st.per.size === 1 ? [...st.per][0] : null;
+    table($('#tblPer'), 'per', [
+      { k: 'perfil', h: 'Perfil de segurança', cls: 'nowrap', f: r => `<span title="${esc(r.perfil)}" style="font-size:12.5px">${esc(r.perfil)}</span>` },
+      { k: 'cliente', h: 'Cliente', f: r => `<span title="${esc(r.cliente)}">${esc(short(r.cliente).slice(0, 20))}${r.nCli > 1 ? ' +' + (r.nCli - 1) : ''}</span>` },
+      { k: 'total', h: 'Total', num: true, f: r => `<b>${nf.format(r.total)}</b>` },
+      { k: 'bar', h: '', v: r => r.total, cls: 'barcell', f: r => `<div class="bar" style="width:${(r.total / mx) * 100}%"></div>` },
+      { k: 'EQ', h: 'Equip.', num: true, f: r => nf.format(r.EQ) },
+      { k: 'FV', h: 'FV', num: true, f: r => nf.format(r.FV) },
+      { k: 'CS', h: 'CS', num: true, f: r => nf.format(r.CS) }
+    ], rows, { limit: st.more.per, click: r => { st.per = only === r.perfil ? new Set(UNIV.per) : new Set([r.perfil]); syncChecks('per'); render(true); }, sel: r => only === r.perfil });
+    moreBtn('per', rows.length);
+  }
   function moreBtn(k, total) { const b = $(`[data-more="${k}"]`); b.classList.toggle('hidden', total <= 15);
     b.textContent = st.more[k] >= total ? 'Mostrar menos' : `Mostrar mais (${nf.format(total)} no total)`;
     b.onclick = () => { st.more[k] = st.more[k] >= total ? 15 : st.more[k] + 35; render(); }; }
@@ -892,7 +1029,7 @@ if (typeof module !== 'undefined') module.exports = Core;
       ['Descartadas (sem cliente/exceção)', nf.format(s.descartadas)], ['Sem data', nf.format(s.semData)], ['Sem coordenada', nf.format(s.semCoord)],
       ['Classe deduzida', nf.format(s.classeDeduzida)], ['Duplicados exatos', nf.format(s.duplicadas)],
       ['Período', fmtDia(META.min) + ' a ' + fmtDia(META.max)],
-      ['Clientes', nf.format(ALL_CLI.size)], ['Tipos de exceção', nf.format(ALL_EXC.size)]
+      ['Clientes', nf.format(ALL_CLI.size)], ['Tipos de exceção', nf.format(UNIV.exc.size)], ['Perfis de segurança', nf.format(UNIV.per.size)]
     ].map(([k, v]) => `<span>${k}: <b>${v}</b></span>`).join('') +
       (s.duplicadas ? `<label style="display:flex;gap:6px;align-items:center;width:100%;margin-top:6px;color:${C.ink}"><input type="checkbox" id="chkDup" ${st.semDup ? 'checked' : ''} style="accent-color:${C.navy}"> Ignorar duplicados exatos (mesma viagem, exceção, data e placa)</label>` : '');
     const cd = $('#chkDup'); if (cd) cd.onchange = () => { st.semDup = cd.checked; render(true); };
@@ -900,7 +1037,7 @@ if (typeof module !== 'undefined') module.exports = Core;
 
   /* ---------- exportação ---------- */
   $('#btnExport').onclick = () => {
-    const cols = ['cliente', 'filial', 'placa', 'carreta', 'motorista', 'excecao', 'classe', 'tipo', 'data', 'local', 'referencia', 'lat', 'lon', 'viagem', 'tecnologia'];
+    const cols = ['cliente', 'perfil', 'filial', 'placa', 'carreta', 'motorista', 'excecao', 'classe', 'tipo', 'data', 'local', 'referencia', 'lat', 'lon', 'viagem', 'tecnologia'];
     const q = v => { v = v instanceof Date ? v.toLocaleString('pt-BR') : (v ?? ''); v = String(v); return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     const lines = [cols.join(';'), ...FILT.map(r => cols.map(c => q(c === 'classe' ? CLASS_LABEL[r.classe] : (c === 'lat' || c === 'lon') ? (r[c] == null ? '' : String(r[c]).replace('.', ',')) : r[c])).join(';'))];
     const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
