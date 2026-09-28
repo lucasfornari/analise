@@ -110,8 +110,11 @@ input[type=date],input[type=search]{width:100%;border:1px solid var(--line);bord
 .checklist input{accent-color:var(--navy);margin:2px 0 0;flex-shrink:0}
 .linkbtns{display:flex;gap:8px;font-size:11.5px}
 .linkbtns button{background:none;border:0;padding:0;color:var(--indigo);cursor:pointer;font-weight:600}
-.side-foot{flex-shrink:0;display:flex;gap:8px;align-items:center;border-top:1px solid var(--line);padding-top:10px}
-.side-foot .btn{flex:1;padding:6px 10px;font-size:12.5px}
+.side-foot{flex-shrink:0;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:10px;margin-top:auto}
+.side-foot .btn{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 10px;font-size:12.5px;width:100%}
+.side-foot .btn:disabled kbd{opacity:.6}
+.side-foot .btn.flash{background:var(--neon);color:var(--navy);transition:background .2s}
+.side-keys{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px}
 .side-foot kbd{font-family:var(--f);font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 5px;background:var(--soft)}
 .active-filters{font-size:12.5px;color:var(--muted);margin:-4px 0 16px;min-height:18px}
 .active-filters b{color:var(--navy)}
@@ -253,8 +256,8 @@ input[type=range]{accent-color:var(--navy);width:110px;vertical-align:middle}
   </div>
 
   <div class="side-foot">
-    <button class="btn" id="btnReset">Limpar filtros</button>
-    <span title="Mostrar ou ocultar este painel"><kbd>Ctrl</kbd> + <kbd>B</kbd></span>
+    <button class="btn" id="btnReset" title="Limpar todos os filtros (Ctrl+Shift+X)"><span>Limpar filtros</span><span><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd></span></button>
+    <div class="side-keys"><kbd>Ctrl</kbd>+<kbd>B</kbd> mostra ou oculta este menu</div>
   </div>
 </aside>
 
@@ -625,7 +628,13 @@ if (typeof module !== 'undefined') module.exports = Core;
     setTimeout(() => { if (map) map.invalidateSize(); Object.values(charts).forEach(c => c.resize()); }, 230);
   }
   $('#btnHamb').onclick = () => { openSection && st.openSec && openSection(null); setSide(app.classList.contains('collapsed')); };
-  document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); $('#btnHamb').click(); } });
+  // atalhos: Ctrl+B alterna o menu; Ctrl+Shift+X limpa todos os filtros
+  document.addEventListener('keydown', e => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    const k = e.key.toLowerCase();
+    if (k === 'b' && !e.shiftKey) { e.preventDefault(); $('#btnHamb').click(); }
+    else if (k === 'x' && e.shiftKey) { e.preventDefault(); resetFilters(); }
+  });
   try { if (localStorage.getItem('painelFiltros') === '0') app.classList.add('collapsed'), $('#btnHamb').setAttribute('aria-expanded', 'false'); } catch (e) {}
 
   /* ---------- upload ---------- */
@@ -787,7 +796,13 @@ if (typeof module !== 'undefined') module.exports = Core;
       $('#' + k + 'Hint').textContent = q ? `${n} encontrado${n === 1 ? '' : 's'}` : '\u00a0'; };
     inp.onkeydown = e => { if (e.key === 'Escape' && inp.value) { e.stopPropagation(); inp.value = ''; inp.oninput(); } };
   }
-  $('#btnReset').onclick = () => { if (ALL.length) init(META.res, META.fname); };
+  function resetFilters() {
+    if (!ALL.length) return;
+    openSection(null);
+    init(META.res, META.fname);
+    const b = $('#btnReset'); b.classList.add('flash'); setTimeout(() => b.classList.remove('flash'), 600);
+  }
+  $('#btnReset').onclick = resetFilters;
 
   function currentFilter() {
     return { from: st.from, to: st.to, classes: st.classes.size === 3 ? null : st.classes,
