@@ -168,7 +168,7 @@ tbody tr.sel{background:#DCDBF5 !important}
 /* mapa */
 .map-card{padding:0;overflow:hidden}
 .map-card .card-head{padding:16px 18px 10px}
-#map{height:560px;background:var(--navy)}
+#map{height:560px;background:var(--navy);position:relative;z-index:0;isolation:isolate} /* confina os z-index do Leaflet (controles usam 1000) dentro do mapa */
 .map-ctrl{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:12.5px}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .seg button{border:0;background:var(--soft);padding:5px 11px;cursor:pointer;font-size:12.5px}
@@ -256,8 +256,10 @@ input[type=range]{accent-color:var(--navy);width:110px;vertical-align:middle}
   </div>
 
   <div class="side-foot">
-    <button class="btn" id="btnReset" title="Limpar todos os filtros (Ctrl+Shift+X)"><span>Limpar filtros</span><span><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd></span></button>
+    <button class="btn" id="btnReset" title="Limpar todos os filtros: Ctrl+Alt+L (funciona em qualquer lugar) ou tecla L (fora de campo de texto)"><span>Limpar filtros</span><span><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>L</kbd></span></button>
+    <div class="side-keys"><kbd>L</kbd> também limpa, quando não estiver digitando</div>
     <div class="side-keys"><kbd>Ctrl</kbd>+<kbd>B</kbd> mostra ou oculta este menu</div>
+    <div class="side-keys" id="appVersion">versão 28/09/2026 · r9</div>
   </div>
 </aside>
 
@@ -628,13 +630,18 @@ if (typeof module !== 'undefined') module.exports = Core;
     setTimeout(() => { if (map) map.invalidateSize(); Object.values(charts).forEach(c => c.resize()); }, 230);
   }
   $('#btnHamb').onclick = () => { openSection && st.openSec && openSection(null); setSide(app.classList.contains('collapsed')); };
-  // atalhos: Ctrl+B alterna o menu; Ctrl+Shift+X limpa todos os filtros
-  document.addEventListener('keydown', e => {
-    if (!(e.ctrlKey || e.metaKey)) return;
-    const k = e.key.toLowerCase();
-    if (k === 'b' && !e.shiftKey) { e.preventDefault(); $('#btnHamb').click(); }
-    else if (k === 'x' && e.shiftKey) { e.preventDefault(); resetFilters(); }
-  });
+  // atalhos. Usa e.code (tecla física) para não depender do layout do teclado e escuta na fase de captura.
+  //  L (fora de campo de texto) ou Ctrl+Alt+L: limpa todos os filtros
+  //  Ctrl+B: mostra ou oculta o menu
+  const typing = el => el && (el.isContentEditable || (el.tagName === 'INPUT' && !['checkbox', 'radio', 'button', 'range'].includes(el.type)) || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT');
+  window.addEventListener('keydown', e => {
+    if (e.repeat) return;
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && !e.shiftKey && !e.altKey && e.code === 'KeyB') { e.preventDefault(); $('#btnHamb').click(); return; }
+    const plainL = !mod && !e.altKey && !e.shiftKey && e.code === 'KeyL' && !typing(e.target);
+    const comboL = e.ctrlKey && e.altKey && !e.shiftKey && !e.metaKey && e.code === 'KeyL';  // global: também dentro de campos e com o painel de seleção aberto
+    if (plainL || comboL) { e.preventDefault(); e.stopPropagation(); resetFilters(); }
+  }, true);
   try { if (localStorage.getItem('painelFiltros') === '0') app.classList.add('collapsed'), $('#btnHamb').setAttribute('aria-expanded', 'false'); } catch (e) {}
 
   /* ---------- upload ---------- */
