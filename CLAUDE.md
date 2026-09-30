@@ -4,44 +4,62 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Visão geral
 
-"Painel de Exceções · Raster": painel analítico 100% client-side em **um único arquivo, `index.html`** (HTML + CSS + JS inline, sem build, sem package.json, sem testes versionados). O usuário carrega o export do BI de exceções (`.xlsx`, `.xls` ou `.csv`) e o painel mostra KPIs, gráficos, mapa de calor e tabelas com filtros. Toda a interface e os identificadores estão em português (pt-BR).
+"Painel de Exceções · Raster": painel analítico 100% client-side, publicado no **GitHub Pages** (site estático em `/analise/`, sem build). O usuário carrega o export do BI de exceções (`.xlsx`, `.xls` ou `.csv`) e o painel mostra KPIs, gráficos, mapa de calor e tabelas com filtros. Código, identificadores e interface em português (pt-BR).
 
-Dependências via CDN (jsdelivr), declaradas no `<head>`: SheetJS (`XLSX`), Chart.js 4, Leaflet 1.9 + leaflet.heat, fontes Barlow/Barlow Condensed (Google Fonts).
+Bibliotecas **só via CDN** (jsdelivr, versões fixas) em `<script defer>` no `index.html`, expostas como globais: `XLSX` (SheetJS 0.18.5), `Chart` (Chart.js 4.4.1), `L` + `L.heatLayer` (Leaflet 1.9.4 + leaflet.heat 0.2.0). As mesmas versões estão em `devDependencies` apenas para os testes — ao trocar a versão de uma lib, atualizar os dois lugares.
 
-## Rodar e testar
-
-- Abrir `index.html` direto no navegador (ou `python3 -m http.server` na raiz) e carregar uma planilha. Precisa de internet para os CDNs e tiles do mapa.
-- O bloco `<script id="core">` é puro (sem DOM) e exporta `Core` via `module.exports`, para ser testado em Node extraindo o script:
+## Comandos
 
 ```bash
-node -e "
-const h=require('fs').readFileSync('index.html','utf8');
-const module={exports:{}}; eval(h.match(/<script id=\"core\">([\s\S]*?)<\/script>/)[1]);
-const Core=module.exports;
-console.log(Core.parseDate('05/03/2026 10:20'), Core.tipoOf('EQ','Violação de baú'));"
+npm ci
+npm test                     # unitários + e2e
+npm run test:unit            # node:test, sem navegador
+npm run test:e2e             # Playwright (sobe tests/servidor.js em http://localhost:4173/analise/)
+npm run serve                # servidor local igual ao Pages, para abrir no navegador
+node --test --test-name-pattern="converterData" "tests/unit/*.test.js"   # um teste unitário
+npx playwright test -g "exporta o CSV"                                   # um teste e2e
+node tests/fixtures/gerar-fixtures.js   # regenera as planilhas de teste
 ```
 
-Mantenha esse bloco livre de DOM/`XLSX` global (o `SSF` do SheetJS é passado como parâmetro) para preservar essa testabilidade.
+- Sem acesso ao CDN (ex.: container com proxy): `CDN_LOCAL=1` faz o Playwright servir as libs a partir do `node_modules`. Se o Chromium já estiver instalado fora do padrão, use `PLAYWRIGHT_BROWSERS_PATH`.
+- `PAINEL_URL=<url>` roda a suíte e2e contra um site já publicado (sem servidor local).
+
+## CI (`.github/workflows/`)
+
+- `testes.yml`: todo push/PR roda unitários e e2e com as libs do CDN real.
+- `producao.yml`: smoke test (a mesma suíte e2e) contra o site publicado, após cada deploy do Pages (`deployment_status`), diariamente e manualmente.
 
 ## Arquitetura
 
-Dois `<script>` no fim do arquivo:
+```
+index.html        só marcação; carrega CDN, css/* e js/main.js (type="module")
+css/              base (variáveis, botões, utilitários) · layout · filtros · painel · mapa
+js/nucleo/        regras puras, sem DOM: texto, conversores, colunas, classificacao,
+                  normalizacao, filtro, agregacao, exportacao
+js/servicos/      LeitorPlanilha (SheetJS injetado no construtor)
+js/estado/        Estado: dados carregados, seleção dos filtros, ordenação/paginação
+js/ui/            um componente (classe) por área da tela
+js/config/        cores para canvas (tema.js) e camadas do mapa
+js/Painel.js      orquestrador; js/main.js instancia com window.XLSX
+```
 
-1. **`Core` (`<script id="core">`)** — leitura, normalização e agregação:
-   - `findHeader` procura, nas 30 primeiras linhas, a linha com `CLIENTE` e uma coluna iniciando por `EXCEC`. `mapColumns` resolve colunas pelos nomes em `COLS` (match exato por prioridade, depois por prefixo; `data` só aceita exato). Obrigatórias: `cliente`, `excecao`, `data`.
-   - Comparações usam `strip` (sem acento, maiúsculas, espaços/NBSP colapsados); rótulos exibidos são o primeiro valor bruto visto para cada chave (`label`/`disp`).
-   - `normalize` gera registros com `classe` (`EQ` equipamento, `FV` fim de viagem, `CS` contexto suspeito — deduzida pela exceção se a coluna Classe faltar), `tipo`, `csTipo`, `mes`/`dia` (strings `AAAA-MM`/`AAAA-MM-DD`), `local` (referência sem o prefixo "N km de"), placas normalizadas por `plateKey`, e marca duplicados exatos (`dupKey` = viagem|exceção|data|placa). Também devolve `stats` usados no bloco de qualidade dos dados.
-   - Datas: serial do Excel via `SSF.parse_date_code`, `dd/mm/aaaa` (padrão BR, nunca mm/dd) ou ISO. Números aceitam formato BR (`1.234,56`).
-   - `filter(records, f, skip)` aplica todos os filtros; `skip` ('exc'|'cli'|'per') ignora a própria faceta para calcular contagens das listas. Um filtro `null` significa "todos".
-   - `aggregate(F)` calcula todas as agregações do painel (clientes com Pareto, mês×classe, locais, placas — excluindo FV —, motoristas — só FV —, perfis).
+Fluxo: `Painel.abrirArquivo` → `LeitorPlanilha.ler` (tenta cada aba; CSV em UTF-8 com fallback Windows-1252) → `normalizarPlanilha` → `Estado.carregar` → `Painel.atualizar(ajustarMapa)`, que chama `estado.recalcular()` e depois `renderizar()` de todos os componentes.
 
-2. **Interface (IIFE)** — estado único em `st` (período, classes, conjuntos `exc`/`cli`/`per`, placa, `semDup`, ordenação, paginação "ver mais"). Fluxo: `loadFile` (CSV decodificado UTF-8 com fallback Windows-1252 e `raw: true`; tenta cada aba até `Core.normalize` funcionar) → `init` (reconstrói filtros e universos `UNIV`) → `render(fit)`, que recalcula `FILT`/`AGG` e chama todos os `render*` (KPIs, gráficos Chart.js via `mkChart`, tabelas via `table()`, mapa Leaflet, qualidade). Toda mudança de filtro chama `render`. `currentFilter()` converte `st` no objeto de filtro do `Core` (conjunto completo ⇒ `null`).
-   - `LISTS` descreve as três listas multisseleção (exceções, clientes, perfis) — acrescentar uma nova faceta passa por `LISTS`, `UNIV`, `st`, o HTML da `.acc-sec` e `Core.filter`.
-   - Exportação CSV usa `;` como separador, BOM UTF-8 e vírgula decimal (compatível com Excel BR).
-   - `localStorage` só guarda se o painel lateral está recolhido (`painelFiltros`).
+Regras importantes:
+- **O estado é a fonte da verdade.** Componentes alteram `estado.selecao` (ou `ordenacao`/`limites`) e chamam `painel.atualizar()`; cada `renderizar()` reflete o estado nos controles (checkboxes, datas, chips, campo de placa). Não guardar estado de filtro no DOM.
+- Componentes recebem o `painel` no construtor e se comunicam por ele (`painel.mapa.focar`, `painel.filtros.definirPlaca`, `painel.listas.fechar`).
+- `js/nucleo` e `js/servicos` não podem tocar em DOM nem em globais do CDN: é o que permite testá-los em Node. Datas seriais do Excel usam o `XLSX.SSF` passado como parâmetro.
+- Comparação de textos da planilha sempre via `normalizarChave` (sem acento, maiúsculas, espaços colapsados); o rótulo exibido é a primeira grafia vista. Datas em texto são **dd/mm/aaaa**, nunca mm/dd.
+- `filtrar(registros, filtro, ignorar)`: listas com tudo marcado viram `null` (sem filtro) em `Estado.filtroAtual()`; `ignorar` ('exc'|'cli'|'per') calcula a contagem facetada de cada lista.
+- Classes: `EQ` equipamento, `FV` fim de viagem, `CS` contexto suspeito (deduzida pela exceção quando a coluna Classe vem vazia). Placas ignoram FV; motoristas só contam FV.
+- Nova lista de multisseleção: `LISTAS` e `reiniciar()` em `Estado.js`, `universo`, a `<section class="acc-sec">` no HTML e `filtrar()`.
+- Texto vindo da planilha que vai para `innerHTML` passa por `escaparHtml`.
 
 ## Convenções
 
-- Paleta/identidade Raster em variáveis CSS no `:root` (`--navy`, `--neon`, `--indigo`…) e espelhada no objeto `C` do JS para os gráficos; cores de classe em `CLASS_COLOR`.
-- Ao alterar comportamento visível, atualizar a string de versão em `#appVersion` (ex.: `versão 28/09/2026 · r9`).
-- Atalhos de teclado: `Ctrl+B` alterna o painel de filtros; `Ctrl+Alt+L` (ou `L` fora de campo de texto) limpa filtros; `Esc` fecha flyouts/limpa busca.
+- Classes JS, funções e comentários em português; comentários curtos, só explicando o quê/porquê.
+- Caminhos de CSS/JS sempre **relativos** (o site vive em `/analise/`); o servidor de teste reproduz isso e os e2e quebram com caminho absoluto.
+- Cores: variáveis em `css/base.css` (`:root`) espelhadas em `js/config/tema.js` para o canvas — manter em sincronia.
+- Os e2e falham com qualquer erro de JS, erro de console ou recurso que não carregou; tiles do mapa são bloqueados nos testes.
+- Ao alterar comportamento visível, atualizar a versão em `#appVersion` no `index.html`.
+- Atalhos: `Ctrl+B` alterna o menu; `Ctrl+Alt+L` (ou `L` fora de campo de texto) limpa filtros; `Esc` limpa a busca e depois fecha a lista aberta.

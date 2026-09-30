@@ -1,0 +1,21 @@
+/* Estrutura da página: barra do topo, grade menu lateral + conteúdo e botão do menu. */
+/* topo */
+.top{background:var(--navy);color:#fff;display:flex;align-items:center;gap:16px;padding:0 24px 0 12px;height:var(--top);position:sticky;top:0;z-index:1000}
+.brand{display:flex;align-items:center;gap:14px;margin-right:auto}
+.brand .logo{height:26px;width:auto;color:#fff;flex-shrink:0;display:block}
+.brand span{color:#B9B7E6;font-size:14px;padding-left:14px;border-left:1px solid #3A3690}
+.file-info{color:#B9B7E6;font-size:13px;max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* grade: a largura do menu é --side (0 quando recolhido) */
+.app{display:grid;grid-template-columns:var(--side) 1fr;min-height:calc(100vh - var(--top));transition:grid-template-columns .2s ease}
+.app.collapsed{--side:0px}
+aside{background:var(--panel);border-right:1px solid var(--line);position:sticky;top:var(--top);height:calc(100vh - var(--top));
+  display:flex;flex-direction:column;gap:12px;padding:12px 14px;overflow:visible;min-width:0;z-index:950}
+.app.collapsed aside{padding:0;border:0;visibility:hidden}
+main{padding:18px 24px 48px;min-width:0}
+
+/* botão do menu (hambúrguer) com contador de filtros ativos */
+.hamb{position:relative;width:40px;height:40px;border-radius:8px;border:1px solid #3A3690;background:transparent;color:#fff;cursor:pointer;display:grid;place-items:center;flex-shrink:0}
+.hamb:hover{border-color:var(--neon)}
+.hamb svg{width:20px;height:20px}
+.hamb .badge{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--neon);color:var(--navy);font-size:11px;font-weight:700;display:grid;place-items:center;padding:0 4px}

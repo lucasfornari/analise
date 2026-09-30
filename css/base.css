@@ -1,0 +1,32 @@
+/* Base: variáveis da identidade Raster, reset, botões e utilitários. */
+/* As cores também existem em js/config/tema.js (usadas no canvas): manter em sincronia. */
+:root{
+  --navy:#020039; --navy-2:#0E0B55; --navy-3:#1C1870;
+  --neon:#00FF00; --indigo:#6C69D9; --ink:#14123A; --muted:#5A5F7A;
+  --bg:#EEF0F7; --panel:#FFFFFF; --line:#DDE0EC; --soft:#F6F7FB;
+  --radius:10px; --top:58px; --side:290px;
+  --f:'Barlow',Arial,sans-serif; --fc:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{min-height:100vh}
+body{font-family:var(--f);color:var(--ink);background:var(--bg);font-size:14px;line-height:1.45}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--indigo);outline-offset:2px}
+
+/* botões */
+.btn{border:1px solid transparent;border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:600;background:var(--soft);color:var(--navy)}
+.btn:hover{border-color:var(--indigo)}
+.btn.primary{background:var(--neon);color:var(--navy)}
+.btn.ghost{background:transparent;color:#fff;border-color:#3A3690}
+.btn.ghost:hover{border-color:var(--neon)}
+.btn.small{padding:4px 10px;font-size:12px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* utilitários */
+.hidden{display:none !important}
+.note{font-size:11.5px;color:var(--muted);margin-top:6px}
+.menor{font-size:12px}
+.texto-perfil{font-size:12.5px}
+
+@media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
