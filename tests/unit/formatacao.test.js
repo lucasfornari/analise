@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatarNumero, formatarPercentual, formatarVariacao, escaparHtml, rotuloMes, formatarDia, ultimoDiaDoMes, abreviarCliente, capitalizar }
+import { textoDaVersao, formatarNumero, formatarPercentual, formatarVariacao, escaparHtml, rotuloMes, formatarDia, ultimoDiaDoMes, abreviarCliente, capitalizar }
   from '../../js/util/formatacao.js';
 
 test('formatação pt-BR', () => {
@@ -12,6 +12,11 @@ test('formatação pt-BR', () => {
     [capitalizar('VIOLAÇÃO DE BAÚ'), 'Violação de baú']
   ];
   for (const [obtido, esperado] of casos) assert.equal(obtido, esperado);
+});
+
+test('versão do rodapé: publicada ou local', () => {
+  assert.equal(textoDaVersao({ versao: 'v0.1.0', data: '30/09/2026', commit: '5f4e44c' }), 'v0.1.0 · 30/09/2026');
+  assert.equal(textoDaVersao({ versao: '', data: '', commit: '' }), 'versão local (desenvolvimento)');
 });
 
 test('escaparHtml neutraliza texto vindo da planilha', () => {

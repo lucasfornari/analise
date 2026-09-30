@@ -33,3 +33,6 @@ export const formatarVariacao = fracao => fracao == null ? '–'
   : (fracao > 0 ? '+' : fracao < 0 ? '−' : '') + formatarPercentual(Math.abs(fracao));
 
 export const formatarDataHora = data => data ? data.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '';
+
+// Rodapé: "v0.1.0 · 30/09/2026" no site publicado; sem versão gravada, é execução local.
+export const textoDaVersao = ({ versao, data }) => versao ? `${versao} · ${data}` : 'versão local (desenvolvimento)';

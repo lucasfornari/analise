@@ -1,11 +1,12 @@
 // Servidor estático que imita o GitHub Pages: publica a raiz do repositório em /analise/,
 // o que pega caminhos absolutos (ex.: "/css/x.css") que quebrariam em produção.
+// RAIZ_SITE: publica outra pasta (o pacote montado pelo deploy, para testá-lo antes de ir ao ar).
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const RAIZ = resolve(fileURLToPath(import.meta.url), '../..');
+const RAIZ = resolve(process.env.RAIZ_SITE || resolve(fileURLToPath(import.meta.url), '../..'));
 const BASE = '/analise/';
 const PORTA = Number(process.env.PORTA || 4173);
 const TIPOS = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json',

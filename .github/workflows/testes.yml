@@ -1,9 +1,11 @@
-# Testes a cada push (em qualquer branch): tipos do catálogo, unitários (Node) e ponta a ponta (navegador real, bibliotecas do CDN).
+# Testes a cada push: tipos do catálogo, unitários (Node) e ponta a ponta (navegador real, bibliotecas do CDN).
 # Só "push": com "pull_request" também, cada push num branch com PR aberto rodaria duas vezes.
+# No main quem testa é o publicar.yml, sobre o pacote que vai ao ar.
 name: Testes
 
 on:
   push:
+    branches-ignore: [main]
   workflow_dispatch:
 
 permissions:

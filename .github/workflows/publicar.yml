@@ -1,0 +1,86 @@
+# Publica o site no GitHub Pages a cada merge no main, com versão semântica automática:
+# calcula a próxima versão (scripts/versao.js), monta o pacote com ela gravada, testa o próprio pacote,
+# publica e só então cria o tag vX.Y.Z e a Release com as notas.
+# Requer Settings > Pages > Source = "GitHub Actions".
+name: Publicar
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    name: Testar e publicar
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # tag e Release
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # histórico e tags para calcular a versão
+      - uses: ./.github/actions/preparar-playwright
+      - run: npm run tipos
+      - run: npm run test:unit
+
+      - name: Calcula a versão
+        id: versao
+        run: echo "versao=$(node scripts/versao.js)" >> "$GITHUB_OUTPUT"
+
+      - name: Monta o site com a versão gravada
+        env:
+          VERSAO: ${{ steps.versao.outputs.versao }}
+          URL_RELEASE: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ steps.versao.outputs.versao }}
+        run: |
+          mkdir -p _site
+          cp -r index.html css js _site/
+          DATA=$(TZ=America/Sao_Paulo date +%d/%m/%Y)
+          printf '%s\n' \
+            '// Gerado no deploy (.github/workflows/publicar.yml).' \
+            "export const VERSAO = Object.freeze({ versao: '$VERSAO', data: '$DATA', commit: '$GITHUB_SHA', url: '$URL_RELEASE' });" \
+            > _site/js/config/versao.js
+          cat _site/js/config/versao.js
+
+      # testa exatamente o pacote que vai ao ar (arquivo faltando na cópia quebra aqui, não em produção)
+      - run: npm run test:e2e
+        env:
+          RAIZ_SITE: _site
+          COMMIT_ESPERADO: ${{ github.sha }}
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: relatorio-publicacao
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4
+
+      - name: Cria o tag e a Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSAO: ${{ steps.versao.outputs.versao }}
+        run: |
+          if git rev-parse -q --verify "refs/tags/$VERSAO" >/dev/null; then
+            echo "$VERSAO já existe (republicação sem commits novos)"
+          else
+            gh release create "$VERSAO" --target "$GITHUB_SHA" --title "$VERSAO" --generate-notes
+          fi
