@@ -31,7 +31,10 @@ input[type=range]{accent-color:var(--navy);width:110px;vertical-align:middle}
 .modal[open]{display:flex;flex-direction:column;gap:12px}
 .modal::backdrop{background:rgba(2,0,57,.55)}
 .modal-cabecalho{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-.modal-cabecalho h2{font-family:var(--fc);font-size:24px;margin:0;color:var(--navy)}
+.modal-cabecalho h2{font-family:var(--fc);font-size:24px;margin:0;color:var(--navy);display:flex;align-items:center;gap:8px}
+.icone-mapa{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:6px;color:var(--muted);flex-shrink:0}
+.icone-mapa svg{width:17px;height:17px;fill:currentColor}
+.icone-mapa:hover,.icone-mapa:focus-visible{color:var(--navy);background:var(--soft)}
 .modal-cabecalho .sub{font-size:12.5px;color:var(--muted)}
 .modal-indicadores{display:flex;flex-wrap:wrap;gap:8px}
 .modal-indicadores div{border:1px solid var(--line);border-radius:8px;padding:6px 12px;background:var(--soft);display:flex;gap:6px;align-items:baseline}
