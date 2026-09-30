@@ -158,6 +158,10 @@ test.describe('com a planilha carregada', () => {
     const janela = page.locator('#detalheLocal');
     await expect(janela).toBeVisible();
     await expect(page.locator('#detalheTitulo')).toHaveText('RECIFE - PE');
+    const gmaps = page.locator('#detalheGoogleMaps');                                 // só o ícone, sem texto
+    await expect(gmaps).toHaveAttribute('href', 'https://www.google.com/maps/search/?api=1&query=-8.050000,-34.900000');
+    await expect(gmaps).toHaveAttribute('target', '_blank');
+    await expect(gmaps).toHaveText('');
     await expect(page.locator('#detalheIndicadores b')).toHaveText(['10', '3', '2', '4', '2']);
 
     await expect(linhas(page, 'tblDetalhe')).toHaveCount(3);                          // aba Placas
