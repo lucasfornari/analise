@@ -1,5 +1,5 @@
 // Orquestrador: conecta leitura do arquivo, estado e componentes de interface.
-// Fluxo: arquivo -> LeitorPlanilha -> Estado.carregar -> atualizar() -> cada componente renderiza.
+// Fluxo: arquivo -> LeitorPlanilha (Web Worker) -> Estado.carregar -> atualizar() -> cada componente renderiza.
 import { $ } from './util/dom.js';
 import { Estado } from './estado/Estado.js';
 import { LeitorPlanilha } from './servicos/LeitorPlanilha.js';
@@ -16,9 +16,9 @@ import { Mapa } from './ui/Mapa.js';
 import { QualidadeLeitura } from './ui/QualidadeLeitura.js';
 
 export class Painel {
-  constructor(xlsx) {
+  constructor() {
     this.estado = new Estado();
-    this.leitor = new LeitorPlanilha(xlsx);
+    this.leitor = new LeitorPlanilha();
 
     this.arquivo = new ControleArquivo(this);
     this.lateral = new PainelLateral(this);
@@ -39,11 +39,11 @@ export class Painel {
   async abrirArquivo(arquivo) {
     this.arquivo.lendo(arquivo.name);
     try {
-      const resultado = await this.leitor.ler(arquivo);
+      const resultado = await this.leitor.ler(arquivo, mensagem => this.arquivo.progresso(mensagem));
       this.estado.carregar(resultado, arquivo.name);
       this.arquivo.carregado(arquivo.name, this.estado.registros.length);
       this.filtros.montar();
-      this.listas.montar();
+      this.listas.reiniciar();
       this.atualizar(true);
     } catch (erro) {
       console.error(erro);
@@ -51,9 +51,14 @@ export class Painel {
     }
   }
 
-  // Recalcula os dados filtrados e redesenha tudo. ajustarMapa: reenquadra o mapa nos eventos.
+  // Recalcula filtro e agregações e redesenha tudo. ajustarMapa: reenquadra o mapa nos eventos.
   atualizar(ajustarMapa = false) {
     this.estado.recalcular();
+    this.redesenhar(ajustarMapa);
+  }
+
+  // Só redesenha, sem refiltrar (ordenação e paginação de tabelas).
+  redesenhar(ajustarMapa = false) {
     this.filtros.renderizar();
     this.listas.renderizar();
     this.resumo.renderizar();
@@ -67,7 +72,7 @@ export class Painel {
   limparFiltros() {
     if (!this.estado.carregado) return;
     this.estado.reiniciar();
-    this.listas.montar();
+    this.listas.reiniciar();
     this.atualizar(true);
     // retorno visual, já que o atalho pode ser usado com o menu recolhido
     this.botaoLimpar.classList.add('flash');

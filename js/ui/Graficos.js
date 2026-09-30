@@ -1,7 +1,7 @@
-// Gráficos de barras (Chart.js, global Chart do CDN): composição por tipo, evolução mensal e CS por composição.
-import { $$ } from '../util/dom.js';
-import { formatarNumero, rotuloMes, ultimoDiaDoMes } from '../util/formatacao.js';
-import { CLASSES, ROTULO_CLASSE, TIPOS, classeDoTipo } from '../nucleo/classificacao.js';
+// Gráficos de barras (Chart.js, global Chart do CDN): composição por grupo, evolução mensal e exceções mais frequentes.
+import { $, $$ } from '../util/dom.js';
+import { formatarNumero, rotuloMes, ultimoDiaDoMes, capitalizar } from '../util/formatacao.js';
+import { CLASSES, ROTULO_CLASSE, ROTULO_GRUPO, CLASSE_DO_GRUPO } from '../nucleo/catalogoExcecoes.js';
 import { CORES, COR_CLASSE, FONTE } from '../config/tema.js';
 
 // Escreve o valor ao lado (barra horizontal) ou acima (vertical) de cada barra.
@@ -31,10 +31,13 @@ const opcoesBase = (extra = {}) => Object.assign({
   plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + formatarNumero(c.parsed.x ?? c.parsed.y) } } }
 }, extra);
 
-const opcoesHorizontais = () => opcoesBase({
-  indexAxis: 'y', layout: { padding: { right: 40 } },
-  scales: { x: { grid: { color: CORES.line } }, y: { grid: { display: false }, ticks: { color: CORES.ink, font: { size: 13 } } } }
+const opcoesHorizontais = (tamanhoFonte = 13) => opcoesBase({
+  indexAxis: 'y', layout: { padding: { right: 48 } },
+  scales: { x: { grid: { color: CORES.line } }, y: { grid: { display: false }, ticks: { color: CORES.ink, font: { size: tamanhoFonte } } } }
 });
+
+const TOP_EXCECOES = 12;
+const encurtar = (texto, max = 42) => texto.length > max ? texto.slice(0, max - 1) + '…' : texto;
 
 export class Graficos {
   graficos = {};
@@ -46,6 +49,9 @@ export class Graficos {
     Chart.defaults.color = CORES.muted;
     Chart.defaults.locale = 'pt-BR';
 
+    $('#legendaGrupos').innerHTML = CLASSES.map(c =>
+      `<span><i style="background:${COR_CLASSE[c]}"></i>${ROTULO_CLASSE[c]}</span>`).join('');
+
     const botoes = $$('#evoMode button');
     botoes.forEach(b => b.onclick = () => {
       this.modoEvolucao = b.dataset.v;
@@ -55,9 +61,9 @@ export class Graficos {
   }
 
   renderizar() {
-    this.#composicaoPorTipo();
+    this.#composicaoPorGrupo();
     this.#evolucaoMensal();
-    this.#contextosSuspeitos();
+    this.#excecoesMaisFrequentes();
   }
 
   redimensionar() {
@@ -69,12 +75,15 @@ export class Graficos {
     this.graficos[id] = new Chart(document.getElementById(id), configuracao);
   }
 
-  #composicaoPorTipo() {
-    const contagem = this.estado.agregado.tipos;
-    const tipos = TIPOS.filter(t => contagem.get(t)).sort((a, b) => contagem.get(b) - contagem.get(a));
-    this.#desenhar('chTipo', {
+  #composicaoPorGrupo() {
+    const contagem = this.estado.agregado.grupos;
+    const grupos = [...contagem.keys()].sort((a, b) => contagem.get(b) - contagem.get(a));
+    this.#desenhar('chGrupo', {
       type: 'bar',
-      data: { labels: tipos, datasets: [{ data: tipos.map(t => contagem.get(t)), backgroundColor: tipos.map(t => COR_CLASSE[classeDoTipo(t)]), borderRadius: 4, barPercentage: 0.8 }] },
+      data: {
+        labels: grupos.map(g => ROTULO_GRUPO[g]),
+        datasets: [{ data: grupos.map(g => contagem.get(g)), backgroundColor: grupos.map(g => COR_CLASSE[CLASSE_DO_GRUPO[g]] || CORES.muted), borderColor: CORES.navy, borderWidth: 1, borderRadius: 4, barPercentage: 0.8 }]
+      },
       options: opcoesHorizontais(),
       plugins: [rotulosDeValor('x')]
     });
@@ -104,16 +113,17 @@ export class Graficos {
     });
   }
 
-  #contextosSuspeitos() {
-    const contagem = this.estado.agregado.csTipos;
-    const tipos = [...contagem.keys()].sort((a, b) => contagem.get(b) - contagem.get(a));
-    this.#desenhar('chCS', {
+  #excecoesMaisFrequentes() {
+    const excecoes = this.estado.agregado.excecoes.slice(0, TOP_EXCECOES);
+    this.#desenhar('chExc', {
       type: 'bar',
       data: {
-        labels: tipos.length ? tipos : ['Sem CS no filtro'],
-        datasets: [{ data: tipos.map(t => contagem.get(t)), backgroundColor: CORES.neon, borderColor: CORES.navy, borderWidth: 1, borderRadius: 4, barPercentage: 0.7 }]
+        labels: excecoes.length ? excecoes.map(e => encurtar(capitalizar(e.excecao))) : ['Sem eventos no filtro'],
+        datasets: [{ data: excecoes.map(e => e.total), backgroundColor: excecoes.map(e => COR_CLASSE[e.classe]), borderColor: CORES.navy, borderWidth: 1, borderRadius: 4, barPercentage: 0.8 }]
       },
-      options: opcoesHorizontais(),
+      options: Object.assign(opcoesHorizontais(11.5), {
+        plugins: { legend: { display: false }, tooltip: { callbacks: { title: itens => capitalizar(excecoes[itens[0].dataIndex]?.excecao || ''), label: c => ' ' + formatarNumero(c.parsed.x) } } }
+      }),
       plugins: [rotulosDeValor('x')]
     });
   }

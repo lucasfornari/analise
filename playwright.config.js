@@ -6,6 +6,8 @@ const url = process.env.PAINEL_URL || 'http://localhost:4173/analise/';
 export default defineConfig({
   testDir: 'tests/e2e',
   timeout: 30_000,
+  fullyParallel: true,
+  workers: process.env.CI ? 4 : undefined,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: { baseURL: url, ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, trace: 'retain-on-failure' },

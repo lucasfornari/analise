@@ -3,6 +3,7 @@
 :root{
   --navy:#020039; --navy-2:#0E0B55; --navy-3:#1C1870;
   --neon:#00FF00; --indigo:#6C69D9; --ink:#14123A; --muted:#5A5F7A;
+  --alta:#C62828; --baixa:#1B7F3B;
   --bg:#EEF0F7; --panel:#FFFFFF; --line:#DDE0EC; --soft:#F6F7FB;
   --radius:10px; --top:58px; --side:290px;
   --f:'Barlow',Arial,sans-serif; --fc:'Barlow Condensed','Arial Narrow',Arial,sans-serif;

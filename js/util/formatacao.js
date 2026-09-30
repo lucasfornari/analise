@@ -27,3 +27,9 @@ export const abreviarCliente = nome => nome
 
 // 'VIOLAÇÃO DE BAÚ' -> 'Violação de baú'
 export const capitalizar = texto => { const t = texto.toLowerCase(); return t.charAt(0).toUpperCase() + t.slice(1); };
+
+// Variação relativa com sinal: +33,5% / −12,0%. Para exceções, subir é ruim.
+export const formatarVariacao = fracao => fracao == null ? '–'
+  : (fracao > 0 ? '+' : fracao < 0 ? '−' : '') + formatarPercentual(Math.abs(fracao));
+
+export const formatarDataHora = data => data ? data.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '';

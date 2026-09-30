@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npm run test:unit && npm run test:e2e",
+    "test": "npm run tipos && npm run test:unit && npm run test:e2e",
+    "tipos": "tsc -p tsconfig.json",
     "test:unit": "node --test \"tests/unit/*.test.js\"",
     "test:e2e": "playwright test",
     "serve": "node tests/servidor.js"
@@ -11,8 +12,10 @@
   "devDependencies": {
     "@playwright/test": "1.56.1",
     "chart.js": "4.4.1",
+    "fflate": "0.8.2",
     "leaflet": "1.9.4",
     "leaflet.heat": "0.2.0",
+    "typescript": "5.6.3",
     "xlsx": "0.18.5"
   }
 }

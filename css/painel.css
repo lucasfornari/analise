@@ -1,13 +1,21 @@
 /* Conteúdo principal: estado vazio, KPIs, cartões, tabelas e qualidade da leitura. */
-.active-filters{font-size:12.5px;color:var(--muted);margin:-4px 0 16px;min-height:18px}
+.active-filters{font-size:12.5px;color:var(--muted);margin:-4px 0 16px;min-height:26px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .active-filters b{color:var(--navy)}
+.rotulo-filtros{margin-right:2px}
+.etiqueta{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:2px 6px 2px 10px;font-size:12px;color:var(--ink);cursor:pointer}
+.etiqueta span{font-size:10px;color:var(--muted);border-radius:50%;width:16px;height:16px;display:grid;place-items:center}
+.etiqueta:hover{border-color:var(--indigo)}
+.etiqueta:hover span{background:var(--navy);color:var(--neon)}
 
 /* estado vazio (antes de carregar planilha) */
 .empty{border:2px dashed #B9BCD6;border-radius:14px;background:var(--panel);padding:70px 30px;text-align:center;max-width:760px;margin:40px auto}
 .empty.drag{border-color:var(--indigo);background:#F2F1FF}
 .empty h2{font-family:var(--fc);font-size:34px;margin:0 0 8px;color:var(--navy)}
 .empty p{color:var(--muted);max-width:520px;margin:0 auto 22px}
-.err{color:#B00020;font-weight:600;margin-top:14px}
+.err{color:var(--alta);font-weight:600;margin-top:14px}
+.progresso{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:18px;color:var(--navy);font-weight:600}
+.spinner{width:18px;height:18px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--indigo);animation:girar .8s linear infinite}
+@keyframes girar{to{transform:rotate(360deg)}}
 
 /* kpis */
 .kpis{display:grid;grid-template-columns:1.3fr repeat(5,1fr);gap:12px;margin-bottom:16px}
@@ -17,9 +25,12 @@
 .kpi.hero{background:var(--navy);border-color:var(--navy)}
 .kpi.hero .v{color:var(--neon);font-size:42px}
 .kpi.hero .l{color:#C9C8E8}
+.kpi .v.alta{color:var(--alta)}
+.kpi .v.baixa{color:var(--baixa)}
 
 /* cartões e gráficos */
 .grid{display:grid;gap:16px;margin-bottom:16px}
+main>section>.card{margin-bottom:16px}
 .g-2{grid-template-columns:1.6fr 1fr}
 .g-2b{grid-template-columns:1fr 1fr}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;min-width:0}
@@ -28,6 +39,8 @@
 .card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
 .chart-box{position:relative;height:300px}
 .chart-box.alto{height:380px}
+.legenda-classes{display:flex;gap:14px;font-size:12px;color:var(--muted);margin:-6px 0 8px}
+.legenda-classes i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;border:1px solid var(--navy);vertical-align:-1px}
 
 /* tabelas */
 .tbl-wrap{overflow:auto;max-height:430px}
@@ -46,8 +59,14 @@ tbody tr.sel{background:#DCDBF5 !important}
 .barcell{width:70px;min-width:50px}
 .nowrap{white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}
 .tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:10px;background:#E6E8F4;color:var(--navy);margin:1px 3px 1px 0;white-space:nowrap}
-.tag.cs{background:var(--navy);color:var(--neon)}
-.tag.fv{background:#E4E3FA}
+.tag.contexto{background:var(--navy);color:var(--neon)}
+.tag.motorista{background:#E4E3FA}
+.apagado{color:var(--muted)}
+.variacao{white-space:nowrap;font-weight:600}
+.variacao.alta{color:var(--alta)}
+.variacao.baixa{color:var(--baixa)}
+/* mapa de calor em células: --intensidade de 0 a 1 */
+.calor{display:inline-block;min-width:42px;padding:1px 6px;border-radius:4px;background:rgba(108,105,217,calc(.12 + var(--intensidade) * .78));color:var(--navy)}
 .more{margin-top:8px}
 td.vazio{text-align:center;padding:24px;color:var(--muted)}
 
@@ -56,6 +75,11 @@ td.vazio{text-align:center;padding:24px;color:var(--muted)}
 .quality b{color:var(--navy)}
 .opcao-duplicados{display:flex;gap:6px;align-items:center;width:100%;margin-top:6px;color:var(--ink)}
 .opcao-duplicados input{accent-color:var(--navy)}
+.fora-catalogo{width:100%;margin-top:6px;color:var(--alta)}
+
+/* reincidência */
+.reinc-resumo{display:flex;flex-wrap:wrap;gap:8px 24px;margin-bottom:10px;font-size:12.5px;color:var(--muted)}
+.reinc-mes b{font-family:var(--fc);font-size:22px;color:var(--navy);margin-right:4px}
 
 @media (max-width:1280px){.kpis{grid-template-columns:repeat(3,1fr)}}
 @media (max-width:1100px){.g-2,.g-2b{grid-template-columns:1fr}}
