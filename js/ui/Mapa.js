@@ -1,11 +1,15 @@
 // Mapa (Leaflet, global L do CDN) com camada de calor e/ou marcadores por local.
+// Clicar no mapa abre os eventos do local mais próximo: placa, motorista, horário, SM, exceção.
 import { $, $$ } from '../util/dom.js';
-import { formatarNumero, escaparHtml, abreviarCliente } from '../util/formatacao.js';
-import { classeDoTipo } from '../nucleo/classificacao.js';
+import { formatarNumero, escaparHtml, abreviarCliente, capitalizar, formatarDataHora } from '../util/formatacao.js';
+import { CLASSE_DO_GRUPO, ROTULO_GRUPO } from '../nucleo/catalogoExcecoes.js';
 import { CORES, COR_CLASSE } from '../config/tema.js';
 import { CAMADAS_MAPA, CENTRO_BRASIL, GRADIENTE_CALOR } from '../config/mapa.js';
 
 const FALHAS_PARA_TROCAR = 4;   // tiles com erro, sem nenhum sucesso, antes de tentar o provedor reserva
+const MAX_MARCADORES = 2000;    // no modo "Locais", só os maiores (o export tem dezenas de milhares de locais)
+const MAX_EVENTOS_POPUP = 50;
+const RAIO_CLIQUE = 30;         // px: distância máxima do clique até o local
 const porFrequencia = mapa => [...mapa.entries()].sort((a, b) => b[1] - a[1]);
 
 export class Mapa {
@@ -30,6 +34,8 @@ export class Mapa {
   #iniciar() {
     this.mapa = L.map('map', { preferCanvas: true }).setView(CENTRO_BRASIL, 4);
     this.marcadores = L.layerGroup();
+    this.popup = L.popup({ maxWidth: 560, minWidth: 360, autoPanPadding: [24, 24], className: 'popup-local' });
+    this.mapa.on('click', e => this.#abrirMaisProximo(e.containerPoint));
     this.#trocarFundo(this.fundo, 0);
   }
 
@@ -69,12 +75,17 @@ export class Mapa {
     const locais = this.estado.agregado.locais.filter(l => l.lat != null);
 
     this.#limparCamadas();
-    if (this.modo !== 'points' && georreferenciados.length) this.#desenharCalor(georreferenciados);
-    if (this.modo !== 'heat') this.#desenharMarcadores(locais);
+    this.mapa.closePopup();
+    this.locaisVisiveis = locais;
+    if (this.modo !== 'points' && locais.length) this.#desenharCalor(locais);
+    const desenhados = this.modo !== 'heat' ? this.#desenharMarcadores(locais) : 0;
 
     const semCoordenada = this.estado.filtrados.length - georreferenciados.length;
+    const notas = [];
+    if (semCoordenada) notas.push(`${formatarNumero(semCoordenada)} eventos sem coordenada ficaram fora do mapa`);
+    if (desenhados && desenhados < locais.length) notas.push(`marcadores dos ${formatarNumero(desenhados)} locais com mais eventos`);
     $('#mapSub').textContent = `${formatarNumero(georreferenciados.length)} eventos georreferenciados em ${formatarNumero(locais.length)} locais`;
-    $('#mapNote').textContent = semCoordenada ? `${formatarNumero(semCoordenada)} eventos sem coordenada ficaram fora do mapa` : '';
+    $('#mapNote').textContent = notas.join(' · ');
     if (ajustar && georreferenciados.length) {
       this.mapa.fitBounds(L.latLngBounds(georreferenciados.map(r => [r.lat, r.lon])).pad(0.08), { maxZoom: 12 });
     }
@@ -87,40 +98,77 @@ export class Mapa {
     if (this.mapa.hasLayer(this.marcadores)) this.mapa.removeLayer(this.marcadores);
   }
 
-  #desenharCalor(registros) {
+  // Um ponto por local, com peso = nº de eventos. Com um ponto por evento (150 mil) o calor satura e
+  // vira uma mancha única; o teto no percentil 95 mantém o gradiente entre locais comuns e críticos.
+  #desenharCalor(locais) {
     const raio = +this.raio.value;
-    this.calor = L.heatLayer(registros.map(r => [r.lat, r.lon, 1]), {
-      radius: raio, blur: Math.round(raio * 0.8), maxZoom: 11, minOpacity: 0.35, gradient: GRADIENTE_CALOR
+    const pesos = locais.map(l => l.nc).sort((a, b) => a - b);
+    const teto = Math.max(1, pesos[Math.floor(pesos.length * 0.95)] || 1);
+    this.calor = L.heatLayer(locais.map(l => [l.lat, l.lon, l.nc]), {
+      radius: raio, blur: Math.round(raio * 0.8), maxZoom: 11, minOpacity: 0.35, max: teto, gradient: GRADIENTE_CALOR
     }).addTo(this.mapa);
   }
 
-  // Círculo proporcional ao nº de eventos, colorido pela classe predominante no local.
+  // Círculo proporcional ao nº de eventos, colorido pela classe do grupo predominante no local.
   #desenharMarcadores(locais) {
-    const maximo = Math.max(1, ...locais.map(l => l.nc));
+    const visiveis = locais.slice(0, MAX_MARCADORES);   // já vêm ordenados por total
+    const maximo = Math.max(1, ...visiveis.map(l => l.nc));
     const fundoEscuro = this.fundo === 'dark' || this.fundo === 'sat';
     // menores por último, para ficarem por cima dos maiores
-    for (const local of [...locais].sort((a, b) => a.nc - b.nc)) {
-      const classe = classeDoTipo(porFrequencia(local.tipos)[0][0]);
+    for (const local of [...visiveis].sort((a, b) => a.nc - b.nc)) {
+      const classe = CLASSE_DO_GRUPO[porFrequencia(local.grupos)[0][0]] || 'MOTORISTA';
       L.circleMarker([local.lat, local.lon], {
         radius: 4 + Math.sqrt(local.nc / maximo) * 18,
         color: fundoEscuro ? CORES.neon : CORES.navy, weight: 1,
-        fillColor: classe === 'EQ' && fundoEscuro ? CORES.indigo : COR_CLASSE[classe],   // navy some no fundo escuro
+        fillColor: classe === 'VEICULO' && fundoEscuro ? CORES.indigo : COR_CLASSE[classe],   // navy some no fundo escuro
         fillOpacity: 0.75
-      }).bindPopup(this.#popup(local)).addTo(this.marcadores);
+      }).on('click', e => { L.DomEvent.stopPropagation(e); this.#abrirPopup(local); }).addTo(this.marcadores);
     }
     this.marcadores.addTo(this.mapa);
+    return visiveis.length;
   }
 
-  #popup(local) {
-    const tipos = porFrequencia(local.tipos).map(([t, n]) => `${escaparHtml(t)}: ${n}`).join('<br>');
-    const clientes = porFrequencia(local.cli).slice(0, 3).map(([c, n]) => `${escaparHtml(abreviarCliente(c))} (${n})`).join(', ');
-    return `<b>${escaparHtml(local.local)}</b><br>${formatarNumero(local.total)} eventos<br>${tipos}<br><span class="popup-clientes">${clientes}</span>`;
+  // Clique em qualquer ponto (inclusive no mapa de calor): abre o local mais próximo dentro do raio.
+  #abrirMaisProximo(ponto) {
+    let maisProximo = null, menorDistancia = RAIO_CLIQUE;
+    for (const local of this.locaisVisiveis || []) {
+      const d = ponto.distanceTo(this.mapa.latLngToContainerPoint([local.lat, local.lon]));
+      if (d < menorDistancia) { menorDistancia = d; maisProximo = local; }
+    }
+    if (maisProximo) this.#abrirPopup(maisProximo);
+  }
+
+  #abrirPopup(local) {
+    this.popup.setLatLng([local.lat, local.lon]).setContent(this.#conteudoPopup(local)).openOn(this.mapa);
+  }
+
+  // Resumo do local e os eventos mais recentes com placa, motorista, horário e SM.
+  #conteudoPopup(local) {
+    const grupos = porFrequencia(local.grupos).slice(0, 4).map(([g, n]) =>
+      `<span class="tag ${(CLASSE_DO_GRUPO[g] || '').toLowerCase()}">${ROTULO_GRUPO[g]} ${formatarNumero(n)}</span>`).join('');
+    const clientes = porFrequencia(local.cli).slice(0, 3).map(([c, n]) => `${escaparHtml(abreviarCliente(c))} (${formatarNumero(n)})`).join(', ');
+    const eventos = [...local.eventos].sort((a, b) => (b.data?.getTime() ?? 0) - (a.data?.getTime() ?? 0));
+    const linhas = eventos.slice(0, MAX_EVENTOS_POPUP).map(r => `<tr>
+      <td class="nowrap">${formatarDataHora(r.data)}</td>
+      <td>${escaparHtml(capitalizar(r.excecao))}</td>
+      <td class="nowrap"><b>${escaparHtml(r.placa)}</b>${r.carreta ? `<br><small>${escaparHtml(r.carreta)}</small>` : ''}</td>
+      <td>${escaparHtml(r.motorista)}</td>
+      <td class="nowrap">${escaparHtml(r.viagem)}</td>
+      <td>${escaparHtml(abreviarCliente(r.cliente))}</td></tr>`).join('');
+    const restantes = eventos.length - MAX_EVENTOS_POPUP;
+    return `<div class="popup-cabecalho"><b>${escaparHtml(local.local)}</b><span>${formatarNumero(local.total)} eventos · ${formatarNumero(local.nPl)} placas</span></div>
+      <div class="popup-grupos">${grupos}</div>
+      <div class="popup-clientes">${clientes}</div>
+      <div class="popup-eventos"><table><thead><tr><th>Data/hora</th><th>Exceção</th><th>Placa</th><th>Motorista</th><th>SM</th><th>Cliente</th></tr></thead>
+      <tbody>${linhas}</tbody></table></div>
+      ${restantes > 0 ? `<div class="popup-mais">e mais ${formatarNumero(restantes)} eventos neste local (filtre o painel para ver todos)</div>` : ''}`;
   }
 
   focar(local) {
     if (local.lat == null || !this.mapa) return;
+    $('#map').scrollIntoView({ behavior: 'smooth', block: 'start' });   // scroll-margin-top desconta o cabeçalho fixo
+    this.mapa.once('moveend', () => this.#abrirPopup(local));
     this.mapa.flyTo([local.lat, local.lon], 15, { duration: 0.8 });
-    $('#map').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   redimensionar() {

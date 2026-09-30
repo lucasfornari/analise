@@ -5,12 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Painel de Exceções · Raster</title>
 
-<!-- fontes e bibliotecas via CDN (versões fixas) -->
+<!-- fontes e bibliotecas via CDN (versões fixas); fflate e SheetJS são carregados pelo leitor em js/config/cdn.js -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-<script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
@@ -51,56 +50,27 @@
   </div>
 
   <div class="fgroup">
-    <h3>Placa ou carreta</h3>
+    <h3>Placa ou carreta <small class="sp">busca parcial</small></h3>
     <input type="search" id="plateSearch" placeholder="Ex.: BRY2E52">
   </div>
 
-  <div class="acc" id="acc">
-    <section class="acc-sec" data-sec="exc">
-      <button class="acc-head" aria-expanded="false"><span class="ttl">Exceções</span><span class="sum" id="excSum"></span><span class="cnt" id="excCount"></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="acc-body" role="dialog" aria-label="Filtro de exceções">
-        <div class="fly-head"><h4>Exceções</h4><span class="cnt" id="excFlyCnt"></span><button class="fly-close" title="Fechar (Esc)" aria-label="Fechar">✕</button></div>
-        <input type="search" id="excSearch" placeholder="Buscar exceção">
-        <div class="acc-tools"><span id="excHint">&nbsp;</span><span class="linkbtns"><button data-all="exc">Marcar todos</button><button data-none="exc">Desmarcar</button></span></div>
-        <div class="checklist" id="excList"></div>
-        <div class="fly-foot"><span>O filtro é aplicado na hora. Com busca ativa, marcar e desmarcar valem só para os itens encontrados.</span><button class="btn primary fly-close">Concluir</button></div>
-      </div>
-    </section>
-    <section class="acc-sec" data-sec="cli">
-      <button class="acc-head" aria-expanded="false"><span class="ttl">Clientes</span><span class="sum" id="cliSum"></span><span class="cnt" id="cliCount"></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="acc-body" role="dialog" aria-label="Filtro de clientes">
-        <div class="fly-head"><h4>Clientes</h4><span class="cnt" id="cliFlyCnt"></span><button class="fly-close" title="Fechar (Esc)" aria-label="Fechar">✕</button></div>
-        <input type="search" id="cliSearch" placeholder="Buscar cliente">
-        <div class="acc-tools"><span id="cliHint">&nbsp;</span><span class="linkbtns"><button data-all="cli">Marcar todos</button><button data-none="cli">Desmarcar</button></span></div>
-        <div class="checklist" id="cliList"></div>
-        <div class="fly-foot"><span>O filtro é aplicado na hora. Com busca ativa, marcar e desmarcar valem só para os itens encontrados.</span><button class="btn primary fly-close">Concluir</button></div>
-      </div>
-    </section>
-    <section class="acc-sec" data-sec="per">
-      <button class="acc-head" aria-expanded="false"><span class="ttl">Perfil de segurança</span><span class="sum" id="perSum"></span><span class="cnt" id="perCount"></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="acc-body" role="dialog" aria-label="Filtro de perfil de segurança">
-        <div class="fly-head"><h4>Perfil de segurança</h4><span class="cnt" id="perFlyCnt"></span><button class="fly-close" title="Fechar (Esc)" aria-label="Fechar">✕</button></div>
-        <input type="search" id="perSearch" placeholder="Buscar perfil, cliente ou seguradora">
-        <div class="acc-tools"><span id="perHint">&nbsp;</span><span class="linkbtns"><button data-all="per">Marcar todos</button><button data-none="per">Desmarcar</button></span></div>
-        <div class="checklist" id="perList"></div>
-        <div class="fly-foot"><span>O filtro é aplicado na hora. Com busca ativa, marcar e desmarcar valem só para os itens encontrados.</span><button class="btn primary fly-close">Concluir</button></div>
-      </div>
-    </section>
-  </div>
+  <!-- listas de multisseleção: montadas por js/ui/ListasSelecao.js a partir de LISTAS -->
+  <div class="acc" id="acc"></div>
 
   <div class="side-foot">
     <button class="btn" id="btnReset" title="Limpar todos os filtros: Ctrl+Alt+L (funciona em qualquer lugar) ou tecla L (fora de campo de texto)"><span>Limpar filtros</span><span><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>L</kbd></span></button>
     <div class="side-keys"><kbd>L</kbd> também limpa, quando não estiver digitando</div>
     <div class="side-keys"><kbd>Ctrl</kbd>+<kbd>B</kbd> mostra ou oculta este menu</div>
-    <div class="side-keys" id="appVersion">versão 28/09/2026 · r9</div>
+    <div class="side-keys" id="appVersion">versão 30/09/2026 · r10</div>
   </div>
 </aside>
 
 <main>
   <section class="empty" id="empty">
     <h2>Carregue o export do BI</h2>
-    <p>Arraste o arquivo data.xlsx para cá ou use o botão abaixo. Os dados são lidos só no seu navegador, nada é enviado para servidor.</p>
+    <p>Arraste o arquivo .xlsx para cá ou use o botão abaixo. Os dados são lidos só no seu navegador, nada é enviado para servidor.</p>
     <button class="btn primary" id="btnUpload2">Escolher arquivo</button>
+    <div class="progresso hidden" id="progresso" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span><span id="progressoTexto"></span></div>
     <div class="err" id="errMsg"></div>
   </section>
 
@@ -111,15 +81,24 @@
     <div class="grid g-2">
       <div class="card">
         <div class="card-head">
-          <div><h2>Ranking por cliente</h2><div class="sub">Clique numa linha para filtrar o painel pelo cliente</div></div>
+          <div><h2>Ranking por cliente</h2><div class="sub">Participação no total e variação do último mês contra o anterior. Clique numa linha para filtrar pelo cliente</div></div>
         </div>
         <div class="tbl-wrap"><table id="tblCli"></table></div>
       </div>
       <div class="card">
-        <h2>Composição por tipo</h2>
-        <div class="sub">Equipamento, fim de viagem e contexto suspeito</div>
-        <div class="chart-box alto"><canvas id="chTipo"></canvas></div>
+        <h2>Composição por grupo</h2>
+        <div class="sub">Grupos do catálogo de exceções, coloridos pela classe</div>
+        <div class="legenda-classes" id="legendaGrupos"></div>
+        <div class="chart-box alto"><canvas id="chGrupo"></canvas></div>
       </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div><h2>Clientes mês a mês</h2><div class="sub">Eventos e participação de cada cliente no total do mês, com a variação contra o mês anterior</div></div>
+      </div>
+      <div class="tbl-wrap"><table id="tblCliMes"></table></div>
+      <button class="btn small more" data-more="cliMes">Mostrar mais</button>
     </div>
 
     <div class="card map-card">
@@ -132,7 +111,7 @@
         </div>
       </div>
       <div id="map"></div>
-      <div class="map-foot"><span class="legend-heat">Menos <i></i> Mais eventos</span><span id="mapNote"></span></div>
+      <div class="map-foot"><span class="legend-heat">Menos <i></i> Mais eventos</span><span>Clique num ponto do mapa para ver placa, motorista, horário e SM dos eventos do local</span><span id="mapNote"></span></div>
     </div>
 
     <div class="grid g-2b">
@@ -144,10 +123,20 @@
         <div class="chart-box"><canvas id="chMes"></canvas></div>
       </div>
       <div class="card">
-        <h2>Contextos suspeitos por composição</h2>
-        <div class="sub">Quais alertas combinados estão gerando os CS</div>
-        <div class="chart-box"><canvas id="chCS"></canvas></div>
+        <h2>Exceções mais frequentes</h2>
+        <div class="sub">As 12 exceções com mais eventos no filtro</div>
+        <div class="chart-box"><canvas id="chExc"></canvas></div>
       </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div><h2>Reincidentes mês a mês</h2><div class="sub" id="reincSub"></div></div>
+        <div class="seg" id="reincModo"><button data-v="motoristas" class="on">Motoristas</button><button data-v="placas">Placas</button></div>
+      </div>
+      <div class="reinc-resumo" id="reincResumo"></div>
+      <div class="tbl-wrap"><table id="tblReinc"></table></div>
+      <button class="btn small more" data-more="reinc">Mostrar mais</button>
     </div>
 
     <div class="grid g-2b">
@@ -160,7 +149,7 @@
       </div>
       <div class="card">
         <div class="card-head">
-          <div><h2>Placas para GQ</h2><div class="sub">Eventos de equipamento e contexto suspeito por placa</div></div>
+          <div><h2>Placas para GQ</h2><div class="sub">Exceções de veículo e contexto suspeito por placa. Clique para filtrar pela placa</div></div>
         </div>
         <div class="tbl-wrap"><table id="tblPlaca"></table></div>
         <button class="btn small more" data-more="placa">Mostrar mais</button>
@@ -170,7 +159,7 @@
     <div class="grid g-2b">
       <div class="card">
         <div class="card-head">
-          <div><h2>Motoristas em fim de viagem</h2><div class="sub">Quem mais aparece em FV não informada, fora do raio ou entrega pendente</div></div>
+          <div><h2>Motoristas</h2><div class="sub">Exceções da classe motorista. Clique para filtrar pelo motorista</div></div>
         </div>
         <div class="tbl-wrap"><table id="tblMot"></table></div>
         <button class="btn small more" data-more="mot">Mostrar mais</button>
@@ -189,7 +178,7 @@
         <h2>Qualidade da leitura</h2>
         <div class="sub">Conferência da normalização do arquivo carregado</div>
         <div class="quality" id="quality"></div>
-        <div class="note">Linhas sem cliente (como o rodapé de filtros do BI) são descartadas. Eventos sem coordenada contam nos totais, mas não aparecem no mapa. Nomes de cliente, local, exceção e motorista são unificados ignorando acento, caixa e espaços; placas ignoram hífen.</div>
+        <div class="note">Linhas sem cliente (como o rodapé de filtros do BI) são descartadas. A classe de cada exceção vem do catálogo fixo (js/nucleo/catalogoExcecoes.js) e prevalece sobre a coluna "classe" da planilha. Nomes de cliente, motorista, perfil e local são unificados ignorando acento, caixa e espaços; placas ignoram hífen.</div>
       </div>
     </div>
   </section>

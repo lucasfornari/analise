@@ -1,149 +1,175 @@
-// Fluxos principais do painel, com a planilha sintética de tests/fixtures (37 eventos, 4 clientes, jan–mar/2026).
-import { test, expect, carregarPlanilha, kpi, FIXTURES } from './apoio.js';
+// Fluxos do painel com a planilha de exemplo (tests/fixtures/planilhas.js): 27 eventos, 3 clientes, jul–set/2026.
+import { test, expect, carregarPlanilha, enviarArquivo, kpi, linhas, PLANILHAS } from './apoio.js';
 import { readFile } from 'node:fs/promises';
 
 test.beforeEach(async ({ page }) => { await page.goto('./'); });
 
+// Espera a rolagem suave terminar (posição igual em dois quadros seguidos).
+const esperarRolagem = page => page.waitForFunction(() => new Promise(fim => {
+  const y = scrollY;
+  requestAnimationFrame(() => requestAnimationFrame(() => fim(scrollY === y)));
+}));
+
 test('carrega a página com as bibliotecas do CDN', async ({ page }) => {
   await expect(page).toHaveTitle(/Painel de Exceções/);
   await expect(page.locator('#empty')).toBeVisible();
-  const libs = await page.evaluate(() => ({ xlsx: !!window.XLSX, chart: !!window.Chart, leaflet: !!window.L, heat: !!window.L?.heatLayer }));
-  expect(libs).toEqual({ xlsx: true, chart: true, leaflet: true, heat: true });
-  // estilos próprios aplicados (garante que os arquivos CSS foram encontrados)
-  await expect(page.locator('header.top')).toHaveCSS('background-color', 'rgb(2, 0, 57)');
+  const libs = await page.evaluate(() => ({ chart: !!window.Chart, leaflet: !!window.L, heat: !!window.L?.heatLayer }));
+  expect(libs).toEqual({ chart: true, leaflet: true, heat: true });
+  await expect(page.locator('header.top')).toHaveCSS('background-color', 'rgb(2, 0, 57)');   // CSS próprio carregado
+  await expect(page.locator('.acc-sec')).toHaveCount(5);
 });
 
-for (const arquivo of ['excecoes.csv', 'excecoes.xlsx']) {
-  test(`lê ${arquivo} e monta o painel`, async ({ page }) => {
-    await carregarPlanilha(page, arquivo);
-    await expect(page.locator('#fileInfo')).toHaveText(`${arquivo} · 37 eventos`);
-    await expect(kpi(page, 0)).toHaveText('37');
-    await expect(kpi(page, 1)).toHaveText('17');
-    await expect(kpi(page, 2)).toHaveText('10');
-    await expect(kpi(page, 3)).toHaveText('10');
-    await expect(kpi(page, 4)).toHaveText('4');
-    await expect(kpi(page, 5)).toHaveText('75,7%');
-    await expect(page.locator('#tblCli tbody tr')).toHaveCount(4);
-    await expect(page.locator('#tblCli tbody tr').first()).toContainText('Transportes Alfa');
-    await expect(page.locator('#tblLoc tbody tr')).toHaveCount(3);
-    await expect(page.locator('#tblPer tbody tr')).toHaveCount(3);
-    await expect(page.locator('#tblMot tbody tr')).toHaveCount(2);
-    await expect(page.locator('#tblPlaca tbody tr')).toHaveCount(3);
-    const graficos = await page.evaluate(() => ['chTipo', 'chMes', 'chCS'].map(id => !!Chart.getChart(id)));
-    expect(graficos).toEqual([true, true, true]);
-    await expect(page.locator('#mapSub')).toHaveText('32 eventos georreferenciados em 3 locais');
-    await expect(page.locator('#quality')).toContainText('Duplicados exatos: 1');
-    await expect(page.locator('#quality')).toContainText('Descartadas (sem cliente/exceção): 1');
+for (const nome of Object.keys(PLANILHAS)) {
+  test(`lê ${nome} e monta o painel`, async ({ page }) => {
+    await carregarPlanilha(page, nome);
+    await expect(page.locator('#fileInfo')).toHaveText(`${nome} · 27 eventos`);
+    await expect(page.locator('#kpis .kpi .v')).toHaveText(['27', '17', '8', '2', '3', '+183,3%']);
+    await expect(linhas(page, 'tblCli')).toHaveCount(3);
+    await expect(linhas(page, 'tblCli').first()).toContainText('TRANSPORTES ALFA');
+    await expect(linhas(page, 'tblLoc')).toHaveCount(4);
+    await expect(linhas(page, 'tblMot')).toHaveCount(4);
+    await expect(linhas(page, 'tblPlaca')).toHaveCount(5);
+    await expect(linhas(page, 'tblPer')).toHaveCount(3);
+    expect(await page.evaluate(() => ['chGrupo', 'chMes', 'chExc'].map(id => !!Chart.getChart(id)))).toEqual([true, true, true]);
+    await expect(page.locator('#mapSub')).toHaveText('26 eventos georreferenciados em 3 locais');
+    await expect(page.locator('#quality')).toContainText('Classe corrigida pelo catálogo: 3');
+    await expect(page.locator('#quality .fora-catalogo')).toContainText('Excecao nova de teste (1)');
   });
 }
 
 test.describe('arquivo inválido', () => {
   test.use({ errosPermitidos: [/Não encontrei o cabeçalho/] });
   test('mostra erro quando falta o cabeçalho esperado', async ({ page }) => {
-    await page.locator('#fileInput').setInputFiles(FIXTURES + 'invalida.csv');
+    await enviarArquivo(page, 'invalida.csv', new TextEncoder().encode('coluna A;coluna B\r\n1;2'));
     await expect(page.locator('#errMsg')).toContainText('Não encontrei o cabeçalho');
     await expect(page.locator('#dash')).toBeHidden();
+    await expect(page.locator('#progresso')).toBeHidden();
   });
 });
 
-test.describe('filtros', () => {
+test.describe('com a planilha carregada', () => {
   test.beforeEach(async ({ page }) => { await carregarPlanilha(page); });
 
-  test('classe, mês e placa', async ({ page }) => {
-    await page.locator('#classChips .chip', { hasText: 'Contexto suspeito' }).click();
-    await expect(kpi(page, 0)).toHaveText('27');
-    await expect(page.locator('#filterBadge')).toHaveText('1');
-    await page.locator('#classChips .chip', { hasText: 'Contexto suspeito' }).click();
+  test('filtros combinados e etiquetas removíveis', async ({ page }) => {
+    await linhas(page, 'tblCli').first().click();                                    // cliente Alfa
+    await expect(kpi(page, 0)).toHaveText('16');
+    await page.locator('#classChips .chip', { hasText: 'Veículo' }).click();         // tira veículo
+    await expect(kpi(page, 0)).toHaveText('13');
+    await page.locator('#monthPresets .chip', { hasText: 'set/26' }).click();
+    await expect(kpi(page, 0)).toHaveText('7');
+    await expect(page.locator('#filterBadge')).toHaveText('3');
+    await expect(page.locator('#activeFilters .etiqueta')).toHaveCount(3);
 
-    await page.locator('#monthPresets .chip', { hasText: 'mar/26' }).click();
+    await page.locator('#activeFilters .etiqueta', { hasText: 'período' }).click();
+    await expect(kpi(page, 0)).toHaveText('13');
+    await page.locator('#activeFilters .etiqueta', { hasText: 'classe' }).click();
+    await expect(kpi(page, 0)).toHaveText('16');
+    await page.locator('#plateSearch').fill('mji-73');                                // busca parcial na carreta
     await expect(kpi(page, 0)).toHaveText('12');
-    await expect(page.locator('#dtFrom')).toHaveValue('2026-03-01');
-    await page.locator('#monthPresets .chip', { hasText: 'Tudo' }).click();
-
-    await page.locator('#plateSearch').fill('abc-1d');
-    await expect(kpi(page, 0)).toHaveText('12');
-    await expect(page.locator('#activeFilters')).toContainText('placa contém ABC1D');
+    await expect(page.locator('#activeFilters')).toContainText('placa contém MJI73');
   });
 
-  test('clique no ranking filtra pelo cliente e clique de novo desfaz', async ({ page }) => {
-    const linha = page.locator('#tblCli tbody tr').first();
-    await linha.click();
-    await expect(kpi(page, 0)).toHaveText('10');
-    await expect(page.locator('#cliCount')).toHaveText('1/4');
-    await page.locator('#tblCli tbody tr').first().click();
-    await expect(kpi(page, 0)).toHaveText('37');
+  test('listas dinâmicas: escolher um cliente deixa só os motoristas dele', async ({ page }) => {
+    await linhas(page, 'tblCli').filter({ hasText: 'BETA' }).click();
+    await page.locator('.acc-sec[data-sec="mot"] .acc-head').click();
+    const visiveis = page.locator('#motList label:not(.hidden)');
+    await expect(visiveis).toHaveCount(1);
+    await expect(visiveis).toContainText('PEDRO LIMA');
+    await page.locator('.acc-sec[data-sec="mot"] [data-so-disponiveis]').uncheck();
+    await expect(visiveis).toHaveCount(4);
+    await expect(page.locator('#motList label.zerada')).toHaveCount(3);
   });
 
-  test('lista de clientes: busca, desmarcar e fechar com Esc', async ({ page }) => {
-    await page.locator('.acc-sec[data-sec="cli"] .acc-head').click();
-    await expect(page.locator('.acc-sec[data-sec="cli"]')).toHaveClass(/open/);
-    await page.locator('#cliSearch').fill('gama');
-    await expect(page.locator('#cliHint')).toHaveText('1 encontrado');
-    await page.locator('.acc-sec[data-sec="cli"] [data-none]').click();
-    await expect(kpi(page, 0)).toHaveText('28');
-    await page.locator('#cliSearch').press('Escape');       // 1º Esc limpa a busca
-    await expect(page.locator('#cliSearch')).toHaveValue('');
-    await page.locator('#cliSearch').press('Escape');       // 2º Esc fecha o painel
-    await expect(page.locator('.acc-sec[data-sec="cli"]')).not.toHaveClass(/open/);
-    await expect(page.locator('#cliCount')).toHaveText('3/4');
+  test('lista de placas: busca, desmarcar e fechar com Esc', async ({ page }) => {
+    await page.locator('.acc-sec[data-sec="pla"] .acc-head').click();
+    await page.locator('#plaSearch').fill('ghi');
+    await expect(page.locator('#plaHint')).toHaveText('1 encontrado');
+    await page.locator('.acc-sec[data-sec="pla"] [data-none]').click();
+    await expect(kpi(page, 0)).toHaveText('22');
+    await page.locator('#plaSearch').press('Escape');                                 // 1º Esc limpa a busca
+    await expect(page.locator('#plaSearch')).toHaveValue('');
+    await page.locator('#plaSearch').press('Escape');                                 // 2º Esc fecha o painel
+    await expect(page.locator('.acc-sec[data-sec="pla"]')).not.toHaveClass(/open/);
+    await expect(page.locator('#plaCount')).toHaveText('4/5');
   });
 
-  test('exceções: "só estes" seleciona um grupo de classe', async ({ page }) => {
+  test('exceções: "só estes" seleciona uma classe inteira', async ({ page }) => {
     await page.locator('.acc-sec[data-sec="exc"] .acc-head').click();
-    await page.locator('#excList .grp', { hasText: 'Fim de viagem' }).getByRole('button', { name: 'só estes' }).click();
-    await expect(kpi(page, 0)).toHaveText('10');
+    await page.locator('#excList .grp', { hasText: 'Contexto suspeito' }).getByRole('button', { name: 'só estes' }).click();
+    await expect(kpi(page, 0)).toHaveText('2');
   });
 
-  test('ignorar duplicados', async ({ page }) => {
-    await page.locator('#chkDup').check();
-    await expect(kpi(page, 0)).toHaveText('36');
+  test('reincidentes mês a mês de motoristas e placas', async ({ page }) => {
+    await expect(page.locator('#reincResumo .reinc-mes')).toHaveCount(2);
+    await expect(page.locator('#reincResumo')).toContainText('set/26: 2 de 4 motoristas também tiveram evento em ago/26');
+    await expect(linhas(page, 'tblReinc')).toHaveCount(2);
+    await expect(linhas(page, 'tblReinc').first()).toContainText('JOÃO DA SILVA');
+    await expect(linhas(page, 'tblReinc').first().locator('td').nth(5)).toHaveText('3');   // meses seguidos
+    await page.locator('#reincModo button', { hasText: 'Placas' }).click();
+    await expect(linhas(page, 'tblReinc')).toHaveCount(2);
+    await expect(linhas(page, 'tblReinc').first()).toContainText('GHI7J89');
+    await linhas(page, 'tblReinc').first().click();                                   // filtra pela placa
+    await expect(page.locator('#activeFilters')).toContainText('placa GHI7J89');
+    await expect(kpi(page, 0)).toHaveText('5');
+  });
+
+  test('clientes mês a mês: participação e variação', async ({ page }) => {
+    const alfa = linhas(page, 'tblCliMes').filter({ hasText: 'TRANSPORTES ALFA' });
+    await expect(alfa).toContainText('100,0%');                                       // único cliente em julho
+    await expect(alfa.locator('.variacao')).toHaveText('▲ +100,0%');
+    await expect(linhas(page, 'tblCliMes').filter({ hasText: 'GAMA' }).locator('.variacao')).toHaveText('▲ novo');
+  });
+
+  test('mapa: local mostra placa, motorista, horário e SM dos eventos', async ({ page }) => {
+    await linhas(page, 'tblLoc').first().click();                                     // RECIFE - PE, 10 eventos
+    const popup = page.locator('.popup-local');
+    await expect(popup).toContainText('RECIFE - PE');
+    await expect(popup.locator('.popup-eventos tbody tr')).toHaveCount(10);
+    await expect(popup.locator('.popup-eventos tbody tr').filter({ hasText: 'GHI7J89' }).first()).toContainText('PEDRO LIMA');
+    await expect(popup).toContainText('6001');
+    await expect(popup).toContainText('19/09/2026, 04:15');
+
+    // clique direto no mapa (sobre o calor) abre o local mais próximo; a ponta do popup marca o local
+    await esperarRolagem(page);                                                        // o painel rola suave até o mapa
+    const ponta = await popup.locator('.leaflet-popup-tip').boundingBox();
+    await popup.locator('.leaflet-popup-close-button').click();
+    await expect(popup).toBeHidden();
+    await page.mouse.click(ponta.x + ponta.width / 2, ponta.y + ponta.height + 12);
+    await expect(popup).toContainText('RECIFE - PE');
+
+    await page.locator('#mapMode button', { hasText: 'Locais' }).click();
+    await expect(page.locator('#map canvas.leaflet-heatmap-layer')).toHaveCount(0);
+  });
+
+  test('ordenação das tabelas', async ({ page }) => {
+    const cabecalho = page.locator('#tblCli th[data-k="cliente"]');
+    await cabecalho.click();
+    await expect(cabecalho).toHaveClass(/desc/);
+    await expect(linhas(page, 'tblCli').first()).toContainText('TRANSPORTES ALFA');
+    await page.locator('#tblCli th[data-k="cliente"]').click();
+    await expect(linhas(page, 'tblCli').first()).toContainText('BETA');
   });
 
   test('atalhos: Ctrl+Alt+L limpa filtros e Ctrl+B recolhe o menu', async ({ page }) => {
-    await page.locator('#classChips .chip', { hasText: 'Equipamento' }).click();
-    await expect(kpi(page, 0)).toHaveText('20');
+    await page.locator('#classChips .chip', { hasText: 'Veículo' }).click();
+    await expect(kpi(page, 0)).toHaveText('19');
     await page.keyboard.press('Control+Alt+KeyL');
-    await expect(kpi(page, 0)).toHaveText('37');
+    await expect(kpi(page, 0)).toHaveText('27');
     await expect(page.locator('#filterBadge')).toBeHidden();
 
     await page.keyboard.press('Control+KeyB');
     await expect(page.locator('.app')).toHaveClass(/collapsed/);
-    await page.reload();                                      // preferência persiste
+    await page.reload();                                                               // preferência persiste
     await expect(page.locator('.app')).toHaveClass(/collapsed/);
-    await page.keyboard.press('Control+KeyB');
-    await expect(page.locator('.app')).not.toHaveClass(/collapsed/);
   });
 
-  test('ordenação das tabelas e "mostrar mais"', async ({ page }) => {
-    const th = page.locator('#tblCli th[data-k="cliente"]');
-    await th.click();                                                   // 1º clique: decrescente
-    await expect(page.locator('#tblCli th[data-k="cliente"]')).toHaveClass(/desc/);
-    await expect(page.locator('#tblCli tbody tr').nth(1)).toContainText('Gama');
-    await th.click();
-    await expect(page.locator('#tblCli tbody tr').first()).toContainText('Beta');
-    await expect(page.locator('[data-more="loc"]')).toBeHidden();      // só 3 locais
+  test('exporta o CSV filtrado', async ({ page }) => {
+    await page.locator('#monthPresets .chip', { hasText: 'set/26' }).click();
+    const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#btnExport').click()]);
+    expect(download.suggestedFilename()).toBe('excecoes_filtradas.csv');
+    const texto = (await readFile(await download.path(), 'utf8')).replace(/^﻿/, '');
+    const [cabecalho, ...dados] = texto.split('\r\n');
+    expect(cabecalho).toContain('cliente;filial;seguradora');
+    expect(dados).toHaveLength(17);
   });
-});
-
-test('mapa: alterna entre calor e locais', async ({ page }) => {
-  await carregarPlanilha(page);
-  const calor = page.locator('#map canvas.leaflet-heatmap-layer');
-  const marcadores = page.locator('#map .leaflet-overlay-pane canvas:not(.leaflet-heatmap-layer)');   // preferCanvas: marcadores em canvas
-  await expect(calor).toHaveCount(1);
-  await page.locator('#mapMode button', { hasText: 'Locais' }).click();
-  await expect(calor).toHaveCount(0);
-  await expect(marcadores).toHaveCount(1);
-  await page.locator('#mapBase button', { hasText: 'Satélite' }).click();
-  await page.locator('#tblLoc tbody tr').first().click();
-});
-
-test('exporta o CSV filtrado', async ({ page }) => {
-  await carregarPlanilha(page);
-  await page.locator('#monthPresets .chip', { hasText: 'mar/26' }).click();
-  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#btnExport').click()]);
-  expect(download.suggestedFilename()).toBe('excecoes_filtradas.csv');
-  const texto = (await readFile(await download.path(), 'utf8')).replace(/^﻿/, '');
-  const linhas = texto.split('\r\n');
-  expect(linhas[0]).toBe('cliente;perfil;filial;placa;carreta;motorista;excecao;classe;tipo;data;local;referencia;lat;lon;viagem;tecnologia');
-  expect(linhas).toHaveLength(13);
 });

@@ -1,38 +1,60 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizarPlanilha } from '../../js/nucleo/normalizacao.js';
+import { normalizarPlanilha, localDaReferencia } from '../../js/nucleo/normalizacao.js';
+import { localizarCabecalho, mapearColunas } from '../../js/nucleo/colunas.js';
+import { linhasDeExemplo, ESPERADO, CABECALHO } from '../fixtures/planilhas.js';
 
-const CABECALHO = ['Cliente', 'Viagem', 'Placa', 'Motorista', 'Perfil', 'Exceções', 'Data Exceção', 'Latitude', 'Longitude', 'Referência', 'Classe'];
-const linha = (cliente, exc, extra = {}) => [cliente, extra.viagem ?? '1', extra.placa ?? 'ABC-1234', extra.motorista ?? 'Ana',
-  extra.perfil ?? 'Ouro', exc, extra.data ?? '10/01/2026 08:00', extra.lat ?? '-23,5', extra.lon ?? '-46,6', extra.ref ?? '1 km de Santos', extra.classe ?? ''];
+const { registros, estatisticas } = normalizarPlanilha(linhasDeExemplo());
+const acharPor = (campo, valor) => registros.filter(r => r[campo] === valor);
 
-test('erro claro quando falta o cabeçalho ou coluna obrigatória', () => {
+test('cabeçalho e colunas do export (inclusive as novas)', () => {
+  assert.equal(localizarCabecalho([['Relatório'], [], CABECALHO]), 2);
+  assert.equal(localizarCabecalho([['A', 'B']]), -1);
+  const c = mapearColunas(CABECALHO);
+  const esperado = { cliente: 3, viagem: 4, fimViagem: 5, filial: 6, vinculo: 7, placa: 8, carreta: 9, motorista: 10, proprietario: 11,
+    tecnologia: 12, perfil: 13, produto: 14, seguradora: 2, corretora: 1, excecao: 15, data: 16, lat: 17, lon: 18, referencia: 19, classe: 20 };
+  assert.deepEqual(c, esperado);
+  assert.equal(mapearColunas(['Data Exceção Original']).data, -1, 'data só por nome exato');
+});
+
+test('estatísticas da leitura', () => {
+  assert.deepEqual(
+    [estatisticas.validas, estatisticas.duplicadas, estatisticas.descartadas, estatisticas.semCoord, estatisticas.classeCorrigida,
+      estatisticas.naoCatalogadas, estatisticas.placasForaDoPadrao, estatisticas.semData],
+    [ESPERADO.eventos, ESPERADO.duplicados, 2, 1, ESPERADO.classeCorrigida, ESPERADO.naoCatalogadas, ESPERADO.placasForaDoPadrao, 0]);
+  assert.deepEqual(estatisticas.excecoesNaoCatalogadas, [{ nome: 'EXCECAO NOVA DE TESTE', n: 1 }]);
+});
+
+test('normalização de nomes, placas, perfis, locais e SM', () => {
+  assert.equal(new Set(registros.map(r => r.cliente)).size, ESPERADO.clientes, '"Transportes Alfa Ltda." unificado');
+  assert.equal(acharPor('motorista', 'MARIA SOUZA')[0].cliente, 'TRANSPORTES ALFA LTDA');
+  assert.ok(acharPor('motorista', 'MARIA SOUZA').every(r => r.placa === 'DEF4567'), 'placa sem hífen');
+  assert.equal(acharPor('placa', 'ABC1D23')[0].carreta, 'MJI7358');
+  assert.ok(acharPor('cliente', 'GAMA CARGAS').every(r => r.perfil === '(sem perfil)'), '"-" vira sem perfil');
+  assert.equal(new Set(acharPor('motorista', 'JOÃO DA SILVA').filter(r => r.excecao.startsWith('VELOCIDADE')).map(r => r.local)).size, 1,
+    '"3,73 km de" e "9.88 km de" o mesmo local');
+  assert.equal(localDaReferencia(''), '(sem referência)');
+  const r = registros[0];
+  assert.deepEqual([r.viagem, r.seguradora, r.corretora, r.vinculo, r.tecnologia, r.produto], ['5001', 'YELUM SEGUROS S.A', '41 CORRETORA DE SEGUROS', 'Frota', 'SASCAR', '02071419 - OUTROS']);
+  assert.equal(r.fimViagem.getDate(), 28);
+});
+
+test('classe e grupo vêm do catálogo; fora dele, da planilha', () => {
+  const classes = Object.fromEntries(['TEMPO DE PARADA EXCEDIDO', 'BOTAO DE PANICO', 'ISCA ESTÁ DISTANTE DO VEÍCULO', 'EXCECAO NOVA DE TESTE']
+    .map(e => [e, acharPor('excecao', e).map(r => `${r.classe}/${r.grupo}`)[0]]));
+  assert.deepEqual(classes, {
+    'TEMPO DE PARADA EXCEDIDO': 'MOTORISTA/PARADA', 'BOTAO DE PANICO': 'MOTORISTA/PANICO',
+    'ISCA ESTÁ DISTANTE DO VEÍCULO': 'VEICULO/ISCA_LOCALIZADOR', 'EXCECAO NOVA DE TESTE': 'VEICULO/NAO_CATALOGADA'
+  });
+});
+
+test('duplicado exato: mesma SM, exceção, data e placa', () => {
+  const dup = registros.filter(r => r.dup);
+  assert.equal(dup.length, 1);
+  assert.deepEqual([dup[0].viagem, dup[0].excecao, dup[0].data.getHours()], ['5003', 'VELOCIDADE EXCEDIDA FAIXA 1', 9]);
+});
+
+test('erros com mensagem para o usuário', () => {
   assert.throws(() => normalizarPlanilha([['a', 'b']]), /Não encontrei o cabeçalho/);
   assert.throws(() => normalizarPlanilha([['Cliente', 'Exceções']]), /Colunas obrigatórias ausentes: data/);
-});
-
-test('gera registros e estatísticas de leitura', () => {
-  const { registros, estatisticas } = normalizarPlanilha([
-    ['Título'], CABECALHO,
-    linha('Alfa Ltda', 'Violação de baú', { classe: 'Veículo' }),
-    linha('ALFA LTDA.', 'Violação de baú', { classe: 'Veículo' }),      // duplicado exato
-    linha('Beta', 'Final de viagem fora do raio', { lat: '0', lon: '0', perfil: '-', viagem: '2' }),
-    linha('Gama', 'Alerta de painel', { data: 'sem data', lat: '', viagem: '3' }),
-    [null, null], ['', 'rodapé do BI']
-  ]);
-  assert.deepEqual(estatisticas, { lidas: 5, vazias: 1, descartadas: 1, semData: 1, semCoord: 2, duplicadas: 1, classeDeduzida: 2, validas: 4 });
-
-  const [alfa, alfaDup, beta, gama] = registros;
-  assert.equal(alfaDup.cliente, 'Alfa Ltda', 'grafias diferentes viram o primeiro rótulo visto');
-  assert.equal(alfa.dup, false);
-  assert.equal(alfaDup.dup, true);
-  assert.deepEqual([alfa.classe, alfa.tipo, alfa.placa, alfa.local, alfa.mes, alfa.dia], ['EQ', 'Baú', 'ABC1234', 'Santos', '2026-01', '2026-01-10']);
-  assert.deepEqual([alfa.lat, alfa.lon], [-23.5, -46.6]);
-  assert.deepEqual([beta.classe, beta.lat, beta.perfil], ['FV', null, '(sem perfil)'], '0,0 não é coordenada');
-  assert.deepEqual([gama.classe, gama.csTipo, gama.data, gama.mes], ['CS', 'Alertas de painel', null, null]);
-});
-
-test('viagem numérica perde o ".0" do Excel', () => {
-  const { registros } = normalizarPlanilha([CABECALHO, linha('A', 'x', { viagem: '123.0' })]);
-  assert.equal(registros[0].viagem, '123');
 });

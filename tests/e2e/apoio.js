@@ -2,6 +2,7 @@
 import { test as base, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { linhasDeExemplo, xlsxDoExport, xlsxDoExcel, csvDoExport } from '../fixtures/planilhas.js';
 
 const RAIZ = fileURLToPath(new URL('../../', import.meta.url));
 // tiles do mapa vêm de serviços externos fora do nosso controle: bloqueados para o teste ser determinístico
@@ -17,15 +18,17 @@ export const test = base.extend({
     page.on('requestfailed', r => { if (!TILES.test(r.url()) && !(process.env.CDN_LOCAL && /fonts\./.test(r.url()))) erros.push('request: ' + r.url()); });
     page.on('response', r => { if (r.status() >= 400 && !TILES.test(r.url())) erros.push(`HTTP ${r.status()}: ${r.url()}`); });
 
-    await page.route(TILES, r => r.abort());
+    // rotas no contexto (e não na página) para valer também para o Web Worker de leitura
+    const contexto = page.context();
+    await contexto.route(TILES, r => r.abort());
     // CDN_LOCAL=1: ambiente sem acesso ao CDN; serve as mesmas versões a partir do node_modules
     if (process.env.CDN_LOCAL) {
-      await page.route(/cdn\.jsdelivr\.net\/npm\//, async r => {
+      await contexto.route(/cdn\.jsdelivr\.net\/npm\//, async r => {
         const [, pacote, arquivo] = new URL(r.request().url()).pathname.match(/^\/npm\/((?:@[^/]+\/)?[^@/]+)@[^/]+\/(.+)$/);
         const tipo = arquivo.endsWith('.css') ? 'text/css' : 'text/javascript';
-        await r.fulfill({ contentType: tipo, body: await readFile(`${RAIZ}node_modules/${pacote}/${arquivo}`) });
+        await r.fulfill({ contentType: tipo, headers: { 'access-control-allow-origin': '*' }, body: await readFile(`${RAIZ}node_modules/${pacote}/${arquivo}`) });
       });
-      await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.fulfill({ contentType: 'text/css', body: '' }));
+      await contexto.route(/fonts\.(googleapis|gstatic)\.com/, r => r.fulfill({ contentType: 'text/css', body: '' }));
     }
 
     await use(page);
@@ -35,11 +38,21 @@ export const test = base.extend({
 
 export { expect };
 
-export const FIXTURES = fileURLToPath(new URL('../fixtures/', import.meta.url));
+// Planilhas de exemplo nos formatos aceitos, geradas em memória.
+export const PLANILHAS = {
+  'export.xlsx': () => xlsxDoExport(linhasDeExemplo()),
+  'salvo-no-excel.xlsx': () => xlsxDoExcel(linhasDeExemplo(), [['Capa', [['sem cabeçalho']]]]),
+  'export.csv': () => csvDoExport(linhasDeExemplo())
+};
 
-export async function carregarPlanilha(page, arquivo = 'excecoes.csv') {
-  await page.locator('#fileInput').setInputFiles(FIXTURES + arquivo);
+export async function enviarArquivo(page, name, bytes) {
+  await page.locator('#fileInput').setInputFiles({ name, mimeType: 'application/octet-stream', buffer: Buffer.from(bytes) });
+}
+
+export async function carregarPlanilha(page, nome = 'export.xlsx') {
+  await enviarArquivo(page, nome, PLANILHAS[nome]());
   await expect(page.locator('#dash')).toBeVisible();
 }
 
 export const kpi = (page, i) => page.locator('#kpis .kpi .v').nth(i);
+export const linhas = (page, tabela) => page.locator(`#${tabela} tbody tr`);

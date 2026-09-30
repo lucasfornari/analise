@@ -1,0 +1,14 @@
+{
+  // Só checagem de tipos (sem build): valida os tipos JSDoc dos arquivos com // @ts-check.
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "strict": true,
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "skipLibCheck": true
+  },
+  "include": ["js/nucleo/catalogoExcecoes.js"]
+}

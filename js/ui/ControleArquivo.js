@@ -40,9 +40,21 @@ export class ControleArquivo {
   lendo(nome) {
     $('#errMsg').textContent = '';
     $('#fileInfo').textContent = `Lendo ${nome}…`;
+    this.#mostrarProgresso(`Lendo ${nome}…`);
+  }
+
+  progresso(mensagem) {
+    this.#mostrarProgresso(mensagem);
+  }
+
+  #mostrarProgresso(mensagem) {
+    $('#progresso').classList.toggle('hidden', !mensagem);
+    $('#progressoTexto').textContent = mensagem || '';
+    $('#btnUpload').disabled = $('#btnUpload2').disabled = !!mensagem;
   }
 
   carregado(nome, total) {
+    this.#mostrarProgresso('');
     $('#fileInfo').textContent = `${nome} · ${formatarNumero(total)} eventos`;
     this.areaVazia.classList.add('hidden');
     $('#dash').classList.remove('hidden');
@@ -50,6 +62,7 @@ export class ControleArquivo {
   }
 
   falhou(nome, erro) {
+    this.#mostrarProgresso('');
     $('#fileInfo').textContent = `Falha ao ler ${nome}`;
     $('#errMsg').textContent = erro.message;
     this.areaVazia.classList.remove('hidden');

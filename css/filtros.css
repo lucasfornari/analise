@@ -51,6 +51,7 @@ input[type=date],input[type=search]{width:100%;border:1px solid var(--line);bord
 .checklist .grp{font-family:var(--fc);font-weight:600;font-size:12.5px;padding:4px 8px 2px;color:var(--navy);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#E9EBF5;z-index:1}
 .checklist label{display:flex;gap:6px;align-items:flex-start;padding:2px 8px;font-size:12px;line-height:1.35;cursor:pointer}
 .checklist label:hover{background:#E6E8F4}
+.checklist label.zerada{opacity:.45}
 .checklist label em{margin-left:auto;font-style:normal;color:var(--muted);font-size:11px;padding-left:6px}
 .checklist input{accent-color:var(--navy);margin:2px 0 0;flex-shrink:0}
 .linkbtns{display:flex;gap:8px;font-size:11.5px}
@@ -66,3 +67,6 @@ input[type=date],input[type=search]{width:100%;border:1px solid var(--line);bord
 .side-foot kbd{font-family:var(--f);font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 5px;background:var(--soft)}
 
 @media (max-height:720px){.fgroup.grow{min-height:70px}}
+
+.so-disponiveis{display:flex;gap:6px;align-items:center;font-size:12.5px;color:var(--muted);flex-shrink:0;cursor:pointer}
+.so-disponiveis input{accent-color:var(--navy);margin:1px 0 0}

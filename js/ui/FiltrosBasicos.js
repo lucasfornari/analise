@@ -1,7 +1,7 @@
 // Filtros simples do menu lateral: período (datas e atalhos por mês), classe e placa.
 import { $, $$ } from '../util/dom.js';
 import { formatarDia, rotuloMes, ultimoDiaDoMes } from '../util/formatacao.js';
-import { ROTULO_CLASSE } from '../nucleo/classificacao.js';
+import { ROTULO_CLASSE } from '../nucleo/catalogoExcecoes.js';
 
 const ESPERA_DIGITACAO = 250;   // ms antes de filtrar pela placa
 

@@ -1,4 +1,4 @@
-# Testes a cada push (em qualquer branch): unitários (Node) e ponta a ponta (navegador real, bibliotecas do CDN).
+# Testes a cada push (em qualquer branch): tipos do catálogo, unitários (Node) e ponta a ponta (navegador real, bibliotecas do CDN).
 # Só "push": com "pull_request" também, cada push num branch com PR aberto rodaria duas vezes.
 name: Testes
 
@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   unitarios:
-    name: Unitários
+    name: Tipos e unitários
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,6 +24,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run tipos
       - run: npm run test:unit
 
   e2e:
