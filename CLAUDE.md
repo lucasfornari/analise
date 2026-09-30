@@ -31,8 +31,18 @@ npx playwright test -g "exporta o CSV"                                   # um te
 
 ## CI (`.github/workflows/`)
 
-- `testes.yml`: todo push roda tipos, unitários e e2e com as libs do CDN real. `.github/actions/preparar-playwright` instala só o `chromium-headless-shell`, sem apt.
-- `producao.yml`: smoke test (a mesma suíte e2e) contra o site publicado, após cada deploy do Pages, diariamente e manualmente.
+- `testes.yml`: todo push fora do `main` roda tipos, unitários e e2e com as libs do CDN real. `.github/actions/preparar-playwright` instala só o `chromium-headless-shell`, sem apt.
+- `publicar.yml` (merge no `main`): calcula a versão, monta o pacote em `_site/` (só `index.html`, `css/`, `js/`) com `js/config/versao.js` gravado, roda os testes **contra o pacote** (`RAIZ_SITE=_site`), publica no Pages e cria o tag `vX.Y.Z` + Release. Requer Settings > Pages > Source = "GitHub Actions".
+- `producao.yml`: smoke test (a mesma suíte e2e) contra o site publicado, após cada deploy (conferindo o commit publicado via `COMMIT_ESPERADO`), diariamente e manualmente.
+
+## Versionamento
+
+Semântico e automático (`scripts/versao.js`, padrão Conventional Commits), calculado desde o último tag a partir das mensagens dos commits e do título do PR (que entra no merge):
+- `feat!:` ou `BREAKING CHANGE` → maior (v0.4.2 → v1.0.0)
+- `feat:` → menor (v0.4.2 → v0.5.0)
+- qualquer outro (`fix:`, `refactor:`, `test:`, sem prefixo…) → correção (v0.4.2 → v0.4.3)
+
+Use esses prefixos nos títulos de PR e commits. Não edite a versão à mão: no repositório `js/config/versao.js` fica vazio e o rodapé mostra "versão local (desenvolvimento)".
 
 ## Arquitetura
 
@@ -66,5 +76,4 @@ Regras importantes:
 - Caminhos de CSS/JS sempre **relativos** (o site vive em `/analise/`); o servidor de teste reproduz isso e os e2e quebram com caminho absoluto.
 - Cores: variáveis em `css/base.css` (`:root`) espelhadas em `js/config/tema.js` para o canvas — manter em sincronia.
 - Os e2e falham com qualquer erro de JS, erro de console ou recurso que não carregou; tiles do mapa são bloqueados nos testes. `tests/unit/desempenho.test.js` e `tests/e2e/volume.spec.js` têm limites de tempo.
-- Ao alterar comportamento visível, atualizar a versão em `#appVersion` no `index.html`.
 - Atalhos: `Ctrl+B` alterna o menu; `Ctrl+Alt+L` (ou `L` fora de campo de texto) limpa filtros; `Esc` limpa a busca e depois fecha a lista aberta.

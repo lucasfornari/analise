@@ -28,7 +28,10 @@ jobs:
           URL="${URL_DEPLOY:-https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}/}"
           echo "PAINEL_URL=${URL%/}/" >> "$GITHUB_ENV"
           echo "Testando $URL"
+      # após um deploy, confere que o site no ar mostra exatamente o commit publicado
       - run: npm run test:e2e
+        env:
+          COMMIT_ESPERADO: ${{ github.event.deployment.sha }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

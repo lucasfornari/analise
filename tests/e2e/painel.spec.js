@@ -19,6 +19,18 @@ test('carrega a página com as bibliotecas do CDN', async ({ page }) => {
   await expect(page.locator('.acc-sec')).toHaveCount(5);
 });
 
+test('rodapé mostra a versão publicada (ou execução local)', async ({ page }) => {
+  const versao = page.locator('#appVersion');
+  if (process.env.COMMIT_ESPERADO) {
+    // pacote do deploy ou site no ar: versão semântica e exatamente o commit publicado
+    await expect(versao).toHaveText(/^v\d+\.\d+\.\d+ · \d{2}\/\d{2}\/\d{4}$/);
+    await expect(versao).toHaveAttribute('data-commit', process.env.COMMIT_ESPERADO);
+    await expect(versao.locator('a')).toHaveAttribute('href', /\/releases\/tag\/v\d+\.\d+\.\d+$/);
+  } else {
+    await expect(versao).toHaveText('versão local (desenvolvimento)');
+  }
+});
+
 for (const nome of Object.keys(PLANILHAS)) {
   test(`lê ${nome} e monta o painel`, async ({ page }) => {
     await carregarPlanilha(page, nome);

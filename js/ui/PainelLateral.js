@@ -1,5 +1,7 @@
 // Menu lateral de filtros recolhível; a preferência fica salva no navegador.
 import { $ } from '../util/dom.js';
+import { textoDaVersao } from '../util/formatacao.js';
+import { VERSAO } from '../config/versao.js';
 
 const CHAVE_PREFERENCIA = 'painelFiltros';
 const DURACAO_TRANSICAO = 230;   // ms, igual à transição do grid em css/layout.css
@@ -10,6 +12,7 @@ export class PainelLateral {
     this.app = $('.app');
     this.botao = $('#btnHamb');
     this.botao.onclick = () => this.alternar();
+    this.#mostrarVersao();
     if (this.#lerPreferencia() === '0') this.#aplicar(false);
   }
 
@@ -21,6 +24,16 @@ export class PainelLateral {
     this.#salvarPreferencia(this.aberto ? '1' : '0');
     // mapa e gráficos precisam remedir depois que a largura muda
     setTimeout(() => this.painel.redimensionar(), DURACAO_TRANSICAO);
+  }
+
+  // Versão gravada no deploy; o link leva às notas da versão (Release) e o commit fica no título.
+  #mostrarVersao() {
+    const alvo = $('#appVersion');
+    alvo.textContent = textoDaVersao(VERSAO);
+    alvo.dataset.commit = VERSAO.commit;
+    if (!VERSAO.url) return;
+    const link = Object.assign(document.createElement('a'), { href: VERSAO.url, target: '_blank', rel: 'noopener', textContent: alvo.textContent, title: 'commit ' + VERSAO.commit });
+    alvo.replaceChildren(link);
   }
 
   #aplicar(aberto) {
