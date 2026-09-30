@@ -139,6 +139,9 @@ test.describe('com a planilha carregada', () => {
     await expect(popup.locator('.popup-cabecalho')).toContainText('10 eventos · 3 placas · 2 motoristas · 4 SMs');
     await expect(popup.locator('.popup-cabecalho')).toContainText('Último evento: 19/09/2026, 04:15');
     await expect(popup.locator('.popup-topo li').first()).toContainText('GHI7J89');
+    const gmapsPopup = popup.locator('.popup-titulo a.icone-mapa');                  // ícone já no popup, sem abrir os detalhes
+    await expect(gmapsPopup).toHaveAttribute('href', 'https://www.google.com/maps/search/?api=1&query=-8.050000,-34.900000');
+    await expect(gmapsPopup).toHaveText('');
 
     // clique direto no mapa (sobre o calor) abre o local mais próximo; a ponta do popup marca o local
     await esperarRolagem(page);                                                        // o painel rola suave até o mapa
@@ -158,7 +161,7 @@ test.describe('com a planilha carregada', () => {
     const janela = page.locator('#detalheLocal');
     await expect(janela).toBeVisible();
     await expect(page.locator('#detalheTitulo')).toHaveText('RECIFE - PE');
-    const gmaps = page.locator('#detalheGoogleMaps');                                 // só o ícone, sem texto
+    const gmaps = page.locator('#detalheGoogleMaps a');                               // só o ícone, sem texto
     await expect(gmaps).toHaveAttribute('href', 'https://www.google.com/maps/search/?api=1&query=-8.050000,-34.900000');
     await expect(gmaps).toHaveAttribute('target', '_blank');
     await expect(gmaps).toHaveText('');

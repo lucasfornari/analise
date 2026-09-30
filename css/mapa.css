@@ -17,6 +17,11 @@ input[type=range]{accent-color:var(--navy);width:110px;vertical-align:middle}
 .popup-local .leaflet-popup-content{margin:12px 14px}
 .popup-cabecalho{display:flex;flex-direction:column;gap:2px;margin-bottom:6px}
 .popup-cabecalho b{font-size:14px}
+.popup-titulo{display:flex;align-items:center;justify-content:space-between;gap:6px;padding-right:14px}   /* espaço do ✕ do Leaflet */
+.popup-local .icone-mapa{width:22px;height:22px}
+.leaflet-container a.icone-mapa{color:var(--muted)}   /* o Leaflet pinta links de azul */
+.leaflet-container a.icone-mapa:hover{color:var(--navy)}
+.popup-local .icone-mapa svg{width:15px;height:15px}
 .popup-cabecalho span,.popup-clientes{color:var(--muted);font-size:12px}
 .popup-grupos{margin-bottom:4px}
 .popup-topo{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0 10px}
