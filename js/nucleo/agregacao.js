@@ -56,13 +56,15 @@ export function reincidencia(entidades, meses) {
     return { mes, ativos, reincidentes: comparavel ? reincidentes : null, pct: comparavel && ativos ? reincidentes / ativos : null };
   });
   const lista = [];
+  let maximoMensal = 0;   // maior contagem de um mês, para a escala de cor da tabela (laço: spread estoura a pilha com volume)
   for (const e of entidades) {
     const sequencia = maiorSequencia(e.m, meses);
     if (sequencia < 2) continue;
     lista.push({ ...e, sequencia, mesesAtivos: meses.filter(m => e.m[m]).length, variacao: variacaoMensal(e.m, meses) });
+    for (const m of meses) if ((e.m[m] || 0) > maximoMensal) maximoMensal = e.m[m];
   }
   lista.sort((a, b) => b.sequencia - a.sequencia || b.total - a.total);
-  return { porMes, lista };
+  return { porMes, lista, maximoMensal };
 }
 
 export function agregar(registros) {

@@ -1,11 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizarPlanilha } from '../../js/nucleo/normalizacao.js';
-import { filtrar, filtrarComFacetas, CAMPO_DA_LISTA } from '../../js/nucleo/filtro.js';
+import { filtrar, filtrarComFacetas, CAMPO_DA_LISTA, EM_BRANCO, valorNaLista } from '../../js/nucleo/filtro.js';
 import { agregar, contarPor, mesAnterior, variacaoMensal, reincidencia } from '../../js/nucleo/agregacao.js';
 import { linhasDeExemplo, ESPERADO } from '../fixtures/planilhas.js';
 
 const { registros } = normalizarPlanilha(linhasDeExemplo());
+// eventos sem motorista e sem placa (o export pode trazer campos vazios)
+const comBrancos = [...registros, { ...registros[0], motorista: '' }, { ...registros[15], placa: '', carreta: '' }];
 const semFiltro = { listas: {} };
 
 test('filtrar combina período, classe, placa/carreta, duplicados e listas', () => {
@@ -24,15 +26,15 @@ test('filtrar combina período, classe, placa/carreta, duplicados e listas', () 
 });
 
 // Contagem facetada ingênua: um filtro completo por lista, ignorando a própria lista.
-function facetasIngenuas(filtro) {
-  return Object.fromEntries(Object.entries(CAMPO_DA_LISTA).map(([lista, campo]) =>
-    [lista, contarPor(filtrar(registros, { ...filtro, listas: { ...filtro.listas, [lista]: null } }), r => r[campo])]));
+function facetasIngenuas(base, filtro) {
+  return Object.fromEntries(Object.keys(CAMPO_DA_LISTA).map(lista =>
+    [lista, contarPor(filtrar(base, { ...filtro, listas: { ...filtro.listas, [lista]: null } }), r => valorNaLista(r, lista))]));
 }
 
 test('passada única de filtro + facetas é igual ao cálculo ingênuo (200 combinações aleatórias)', () => {
   let s = 7;
   const aleatorio = () => (s = (s * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;
-  const valores = Object.fromEntries(Object.entries(CAMPO_DA_LISTA).map(([l, c]) => [l, [...new Set(registros.map(r => r[c]).filter(Boolean))]]));
+  const valores = Object.fromEntries(Object.keys(CAMPO_DA_LISTA).map(l => [l, [...new Set(comBrancos.map(r => valorNaLista(r, l)))]]));
   const talvez = gerar => aleatorio() < 0.5 ? gerar() : null;
   for (let i = 0; i < 200; i++) {
     const filtro = {
@@ -41,10 +43,21 @@ test('passada única de filtro + facetas é igual ao cálculo ingênuo (200 comb
       semDuplicados: aleatorio() < 0.3, placa: aleatorio() < 0.15 ? 'jk' : '',
       listas: Object.fromEntries(Object.keys(CAMPO_DA_LISTA).map(l => [l, talvez(() => new Set(valores[l].filter(() => aleatorio() < 0.5)))]))
     };
-    const { filtrados, facetas } = filtrarComFacetas(registros, filtro);
-    assert.deepEqual(filtrados, filtrar(registros, filtro), `filtrados #${i}`);
-    assert.deepEqual(facetas, facetasIngenuas(filtro), `facetas #${i}`);
+    const { filtrados, facetas } = filtrarComFacetas(comBrancos, filtro);
+    assert.deepEqual(filtrados, filtrar(comBrancos, filtro), `filtrados #${i}`);
+    assert.deepEqual(facetas, facetasIngenuas(comBrancos, filtro), `facetas #${i}`);
   }
+});
+
+test('motorista ou placa em branco é uma opção da lista e não some ao desmarcar outro item', () => {
+  const motoristas = new Set(comBrancos.map(r => valorNaLista(r, 'mot')));
+  assert.ok(motoristas.has(EM_BRANCO));
+  motoristas.delete('ANA COSTA');
+  const { filtrados, facetas } = filtrarComFacetas(comBrancos, { listas: { mot: motoristas } });
+  assert.equal(filtrados.length, comBrancos.length - 6, 'só os 6 eventos da Ana saem');
+  assert.equal(facetas.mot.get(EM_BRANCO), 1);
+  assert.equal(facetas.pla.get(EM_BRANCO), 1);
+  assert.equal(filtrar(comBrancos, { listas: { pla: new Set([EM_BRANCO]) } }).length, 1, 'dá para filtrar só os sem placa');
 });
 
 test('facetas deixam o filtro dinâmico: escolher um cliente restringe motoristas e placas', () => {
@@ -80,6 +93,14 @@ test('agregar: placas ignoram exceções de motorista e motoristas só contam as
   // pânico do Pedro e isca da Ana foram reclassificados pelo catálogo
   assert.deepEqual(a.placas.map(p => [p.placa, p.total]), [['GHI7J89', 3], ['JKL0M12', 3], ['ABC1D23', 2], ['DEF4567', 1], ['XX123', 1]]);
   assert.deepEqual(a.motoristas.map(m => [m.motorista, m.total]), [['JOÃO DA SILVA', 10], ['MARIA SOUZA', 3], ['ANA COSTA', 2], ['PEDRO LIMA', 2]]);
+});
+
+test('reincidência com muitas entidades não estoura a pilha e calcula o máximo mensal', () => {
+  const meses = ['2026-01', '2026-02', '2026-03'];
+  const entidades = Array.from({ length: 150_000 }, (_, i) => ({ total: 3, m: { '2026-01': 1, '2026-02': 1, '2026-03': i === 7 ? 9 : 1 } }));
+  const r = reincidencia(entidades, meses);
+  assert.equal(r.lista.length, 150_000);
+  assert.equal(r.maximoMensal, 9);
 });
 
 test('reincidência mês a mês: só meses de calendário seguidos contam', () => {

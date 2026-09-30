@@ -5,6 +5,11 @@ import { chavePlaca } from './texto.js';
 export const CAMPO_DA_LISTA = Object.freeze({ exc: 'excecao', cli: 'cliente', mot: 'motorista', pla: 'placa', per: 'perfil' });
 const LISTAS = Object.keys(CAMPO_DA_LISTA);
 
+// Valor vazio é uma opção própria das listas: sem ela, desmarcar qualquer motorista ou placa
+// sumiria com todos os eventos sem motorista/placa, e não haveria como marcá-los de volta.
+export const EM_BRANCO = '(em branco)';
+export const valorNaLista = (registro, lista) => registro[CAMPO_DA_LISTA[lista]] || EM_BRANCO;
+
 // filtro: { de, ate: 'AAAA-MM-DD', classes: Set | null, placa: texto (busca em placa e carreta),
 //           semDuplicados: bool, listas: { exc, cli, mot, pla, per: Set | null } }  (null = sem filtro)
 
@@ -24,7 +29,7 @@ const listasAtivas = filtro => LISTAS.filter(l => filtro.listas?.[l]).map(l => (
 
 export function filtrar(registros, filtro) {
   const passaBase = criarFiltroBase(filtro), ativas = listasAtivas(filtro);
-  return registros.filter(r => passaBase(r) && ativas.every(a => a.valores.has(r[a.campo])));
+  return registros.filter(r => passaBase(r) && ativas.every(a => a.valores.has(r[a.campo] || EM_BRANCO)));
 }
 
 // Filtra e calcula a contagem facetada numa única passada.
@@ -33,21 +38,21 @@ export function filtrar(registros, filtro) {
 export function filtrarComFacetas(registros, filtro) {
   const passaBase = criarFiltroBase(filtro), ativas = listasAtivas(filtro);
   const facetas = Object.fromEntries(LISTAS.map(l => [l, new Map()]));
-  const contar = (lista, valor) => { if (valor) facetas[lista].set(valor, (facetas[lista].get(valor) || 0) + 1); };
+  const contar = (lista, valor) => facetas[lista].set(valor, (facetas[lista].get(valor) || 0) + 1);
   const filtrados = [];
 
   for (const r of registros) {
     if (!passaBase(r)) continue;
     let reprovadas = 0, reprovada = null;
     for (const a of ativas) {
-      if (!a.valores.has(r[a.campo])) { reprovada = a; if (++reprovadas > 1) break; }
+      if (!a.valores.has(r[a.campo] || EM_BRANCO)) { reprovada = a; if (++reprovadas > 1) break; }
     }
     if (reprovadas === 0) {
       filtrados.push(r);
-      for (const l of LISTAS) contar(l, r[CAMPO_DA_LISTA[l]]);
+      for (const l of LISTAS) contar(l, r[CAMPO_DA_LISTA[l]] || EM_BRANCO);
     } else if (reprovadas === 1) {
       // reprovado só pela própria lista: conta como opção disponível nela
-      contar(reprovada.lista, r[reprovada.campo]);
+      contar(reprovada.lista, r[reprovada.campo] || EM_BRANCO);
     }
   }
   return { filtrados, facetas };
