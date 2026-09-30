@@ -1,0 +1,18 @@
+# Instala dependências npm e o navegador dos testes.
+name: Preparar Playwright
+description: npm ci + chromium-headless-shell, sem apt
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: npm
+    - run: npm ci
+      shell: bash
+    # Só o headless-shell (o binário que o modo headless usa) e sem --with-deps: as bibliotecas que ele
+    # precisa já vêm no ubuntu-latest, e o apt do runner chega a levar minutos. Se faltar alguma,
+    # o navegador não abre e os testes falham.
+    - run: npx playwright install --only-shell chromium
+      shell: bash

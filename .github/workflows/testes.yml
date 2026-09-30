@@ -1,9 +1,10 @@
-# Testes a cada push e pull request: unitários (Node) e ponta a ponta (navegador real, bibliotecas do CDN).
+# Testes a cada push (em qualquer branch): unitários (Node) e ponta a ponta (navegador real, bibliotecas do CDN).
+# Só "push": com "pull_request" também, cada push num branch com PR aberto rodaria duas vezes.
 name: Testes
 
 on:
   push:
-  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -30,12 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - uses: ./.github/actions/preparar-playwright
       # serve o repositório em /analise/, como o GitHub Pages, e carrega as libs do CDN real
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4
