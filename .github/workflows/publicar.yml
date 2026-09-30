@@ -1,6 +1,7 @@
-# Publica o site no GitHub Pages a cada merge no main, com versão semântica automática:
-# calcula a próxima versão (scripts/versao.js), monta o pacote com ela gravada, testa o próprio pacote,
-# publica e só então cria o tag vX.Y.Z e a Release com as notas.
+# Publica o site no GitHub Pages a cada merge no main, com versão semântica automática.
+# Dois jobs em sequência, para o deploy só existir depois dos testes:
+#   1. testar:   tipos e unitários, calcula a versão, monta o pacote com ela gravada e testa o próprio pacote
+#   2. publicar: só roda se o 1 passar; publica o pacote testado e cria o tag vX.Y.Z e a Release
 # Requer Settings > Pages > Source = "GitHub Actions".
 name: Publicar
 
@@ -17,16 +18,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  publicar:
-    name: Testar e publicar
+  testar:
+    name: 1. Testar o pacote
     runs-on: ubuntu-latest
-    permissions:
-      contents: write   # tag e Release
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+    outputs:
+      versao: ${{ steps.versao.outputs.versao }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -67,20 +63,33 @@ jobs:
             test-results/
           retention-days: 7
 
-      - uses: actions/configure-pages@v5
+      # guarda o pacote testado para o job de publicação (não é publicado aqui)
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+
+  publicar:
+    name: 2. Publicar e versionar
+    needs: testar
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # tag e Release
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
       - id: deploy
         uses: actions/deploy-pages@v4
 
       - name: Cria o tag e a Release
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSAO: ${{ steps.versao.outputs.versao }}
+          VERSAO: ${{ needs.testar.outputs.versao }}
         run: |
-          if git rev-parse -q --verify "refs/tags/$VERSAO" >/dev/null; then
+          if gh release view "$VERSAO" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "$VERSAO já existe (republicação sem commits novos)"
           else
-            gh release create "$VERSAO" --target "$GITHUB_SHA" --title "$VERSAO" --generate-notes
+            gh release create "$VERSAO" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "$VERSAO" --generate-notes
           fi

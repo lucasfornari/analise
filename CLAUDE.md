@@ -32,7 +32,7 @@ npx playwright test -g "detalhes do local"                               # um te
 ## CI (`.github/workflows/`)
 
 - `testes.yml`: todo push fora do `main` roda tipos, unitários e e2e com as libs do CDN real. `.github/actions/preparar-playwright` instala só o `chromium-headless-shell`, sem apt.
-- `publicar.yml` (merge no `main`): calcula a versão, monta o pacote em `_site/` (só `index.html`, `css/`, `js/`) com `js/config/versao.js` gravado, roda os testes **contra o pacote** (`RAIZ_SITE=_site`), publica no Pages e cria o tag `vX.Y.Z` + Release. Requer Settings > Pages > Source = "GitHub Actions".
+- `publicar.yml` (merge no `main`), dois jobs em sequência: **1. testar** calcula a versão, monta o pacote em `_site/` (só `index.html`, `css/`, `js/`) com `js/config/versao.js` gravado e roda os testes **contra o pacote** (`RAIZ_SITE=_site`); **2. publicar** só roda se o 1 passar (é o único com o ambiente `github-pages`, então nenhum deployment é aberto antes dos testes), publica o pacote testado e cria o tag `vX.Y.Z` + Release. Requer Settings > Pages > Source = "GitHub Actions".
 - `producao.yml`: smoke test (a mesma suíte e2e) contra o site publicado, após cada deploy (conferindo o commit publicado via `COMMIT_ESPERADO`), diariamente e manualmente.
 
 ## Versionamento
