@@ -4,6 +4,7 @@ import { $, $$ } from '../util/dom.js';
 import { formatarNumero, escaparHtml, abreviarCliente, formatarDataHora } from '../util/formatacao.js';
 import { CLASSE_DO_GRUPO, ROTULO_GRUPO } from '../nucleo/catalogoExcecoes.js';
 import { detalharLocal } from '../nucleo/detalheLocal.js';
+import { iconeGoogleMaps } from '../util/links.js';
 import { CORES, COR_CLASSE } from '../config/tema.js';
 import { CAMADAS_MAPA, CENTRO_BRASIL, GRADIENTE_CALOR } from '../config/mapa.js';
 
@@ -154,7 +155,7 @@ export class Mapa {
     const clientes = porFrequencia(local.cli).slice(0, 3).map(([c, n]) => `${escaparHtml(abreviarCliente(c))} (${formatarNumero(n)})`).join(', ');
     const topo = (itens, campo) => itens.slice(0, TOP_NO_POPUP).map(x =>
       `<li><b>${escaparHtml(x[campo])}</b><span>${formatarNumero(x.total)}</span></li>`).join('');
-    return `<div class="popup-cabecalho"><b>${escaparHtml(local.local)}</b>
+    return `<div class="popup-cabecalho"><div class="popup-titulo"><b>${escaparHtml(local.local)}</b>${iconeGoogleMaps(local.lat, local.lon)}</div>
         <span>${formatarNumero(resumo.eventos)} eventos · ${formatarNumero(resumo.placas)} placas · ${formatarNumero(resumo.motoristas)} motoristas · ${formatarNumero(resumo.viagens)} SMs</span>
         ${resumo.ultimo ? `<span>Último evento: ${formatarDataHora(resumo.ultimo)}</span>` : ''}</div>
       <div class="popup-grupos">${grupos}</div>

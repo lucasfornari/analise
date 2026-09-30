@@ -3,7 +3,7 @@
 import { $, $$ } from '../util/dom.js';
 import { formatarNumero, escaparHtml, abreviarCliente, capitalizar, formatarDataHora } from '../util/formatacao.js';
 import { baixarArquivo } from '../util/download.js';
-import { linkGoogleMaps } from '../util/links.js';
+import { iconeGoogleMaps } from '../util/links.js';
 import { CLASSE_DO_GRUPO, ROTULO_GRUPO, ROTULO_CLASSE } from '../nucleo/catalogoExcecoes.js';
 import { detalharLocal, buscarNoDetalhe } from '../nucleo/detalheLocal.js';
 import { gerarCsv } from '../nucleo/exportacao.js';
@@ -63,10 +63,7 @@ export class DetalheLocal {
     const { resumo } = this.detalhe;
     $('#detalheTitulo').textContent = this.local.local;
     // coordenada tratada do local: média das coordenadas válidas dos eventos
-    const semCoordenada = this.local.lat == null;
-    const gmaps = $('#detalheGoogleMaps');
-    gmaps.classList.toggle('hidden', semCoordenada);
-    if (!semCoordenada) gmaps.href = linkGoogleMaps(this.local.lat, this.local.lon);
+    $('#detalheGoogleMaps').innerHTML = this.local.lat == null ? '' : iconeGoogleMaps(this.local.lat, this.local.lon);
     $('#detalheResumo').textContent = resumo.primeiro
       ? `De ${formatarDataHora(resumo.primeiro)} a ${formatarDataHora(resumo.ultimo)}, com os filtros atuais do painel`
       : 'Com os filtros atuais do painel';
