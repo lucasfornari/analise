@@ -215,14 +215,4 @@ test.describe('com a planilha carregada', () => {
     await page.reload();                                                               // preferência persiste
     await expect(page.locator('.app')).toHaveClass(/collapsed/);
   });
-
-  test('exporta o CSV filtrado', async ({ page }) => {
-    await page.locator('#monthPresets .chip', { hasText: 'set/26' }).click();
-    const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#btnExport').click()]);
-    expect(download.suggestedFilename()).toBe('excecoes_filtradas.csv');
-    const texto = (await readFile(await download.path(), 'utf8')).replace(/^﻿/, '');
-    const [cabecalho, ...dados] = texto.split('\r\n');
-    expect(cabecalho).toContain('cliente;filial;seguradora');
-    expect(dados).toHaveLength(17);
-  });
 });

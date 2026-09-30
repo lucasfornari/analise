@@ -22,7 +22,7 @@ npm run test:unit            # node:test, sem navegador
 npm run test:e2e             # Playwright em paralelo (sobe tests/servidor.js em http://localhost:4173/analise/)
 npm run serve                # servidor local igual ao Pages, para abrir no navegador
 node --test --test-name-pattern="converterData" "tests/unit/*.test.js"   # um teste unitário
-npx playwright test -g "exporta o CSV"                                   # um teste e2e
+npx playwright test -g "detalhes do local"                               # um teste e2e
 ```
 
 - Sem acesso ao CDN (ex.: container com proxy): `CDN_LOCAL=1` faz o Playwright servir as libs a partir do `node_modules` (rotas no contexto, para valer também no Web Worker). Se o Chromium estiver instalado fora do padrão, use `PLAYWRIGHT_BROWSERS_PATH`.
