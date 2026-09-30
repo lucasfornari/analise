@@ -1,14 +1,15 @@
 // Mapa (Leaflet, global L do CDN) com camada de calor e/ou marcadores por local.
-// Clicar no mapa abre os eventos do local mais próximo: placa, motorista, horário, SM, exceção.
+// Clicar no mapa abre o resumo do local mais próximo; "Ver detalhes" abre placas, motoristas e eventos (DetalheLocal).
 import { $, $$ } from '../util/dom.js';
-import { formatarNumero, escaparHtml, abreviarCliente, capitalizar, formatarDataHora } from '../util/formatacao.js';
+import { formatarNumero, escaparHtml, abreviarCliente, formatarDataHora } from '../util/formatacao.js';
 import { CLASSE_DO_GRUPO, ROTULO_GRUPO } from '../nucleo/catalogoExcecoes.js';
+import { detalharLocal } from '../nucleo/detalheLocal.js';
 import { CORES, COR_CLASSE } from '../config/tema.js';
 import { CAMADAS_MAPA, CENTRO_BRASIL, GRADIENTE_CALOR } from '../config/mapa.js';
 
 const FALHAS_PARA_TROCAR = 4;   // tiles com erro, sem nenhum sucesso, antes de tentar o provedor reserva
 const MAX_MARCADORES = 2000;    // no modo "Locais", só os maiores (o export tem dezenas de milhares de locais)
-const MAX_EVENTOS_POPUP = 50;
+const TOP_NO_POPUP = 3;          // placas e motoristas mais frequentes no resumo do popup
 const RAIO_CLIQUE = 30;         // px: distância máxima do clique até o local
 const porFrequencia = mapa => [...mapa.entries()].sort((a, b) => b[1] - a[1]);
 
@@ -18,6 +19,7 @@ export class Mapa {
   mapa = null;
 
   constructor(painel) {
+    this.painel = painel;
     this.estado = painel.estado;
     this.raio = $('#heatRadius');
     this.#ligarBotoes('#mapBase', v => this.definirFundo(v));
@@ -34,7 +36,7 @@ export class Mapa {
   #iniciar() {
     this.mapa = L.map('map', { preferCanvas: true }).setView(CENTRO_BRASIL, 4);
     this.marcadores = L.layerGroup();
-    this.popup = L.popup({ maxWidth: 560, minWidth: 360, autoPanPadding: [24, 24], className: 'popup-local' });
+    this.popup = L.popup({ maxWidth: 380, minWidth: 320, autoPanPadding: [24, 24], className: 'popup-local' });
     this.mapa.on('click', e => this.#abrirMaisProximo(e.containerPoint));
     this.#trocarFundo(this.fundo, 0);
   }
@@ -140,28 +142,25 @@ export class Mapa {
 
   #abrirPopup(local) {
     this.popup.setLatLng([local.lat, local.lon]).setContent(this.#conteudoPopup(local)).openOn(this.mapa);
+    // o Leaflet impede a propagação de cliques no popup: o botão recebe o evento direto
+    this.popup.getElement().querySelector('[data-detalhe]').onclick = () => this.painel.detalhe.abrir(local);
   }
 
-  // Resumo do local e os eventos mais recentes com placa, motorista, horário e SM.
+  // Resumo do local: totais, grupos, principais placas e motoristas. O detalhamento completo fica na janela.
   #conteudoPopup(local) {
+    const { resumo, placas, motoristas } = detalharLocal(local.eventos);
     const grupos = porFrequencia(local.grupos).slice(0, 4).map(([g, n]) =>
       `<span class="tag ${(CLASSE_DO_GRUPO[g] || '').toLowerCase()}">${ROTULO_GRUPO[g]} ${formatarNumero(n)}</span>`).join('');
     const clientes = porFrequencia(local.cli).slice(0, 3).map(([c, n]) => `${escaparHtml(abreviarCliente(c))} (${formatarNumero(n)})`).join(', ');
-    const eventos = [...local.eventos].sort((a, b) => (b.data?.getTime() ?? 0) - (a.data?.getTime() ?? 0));
-    const linhas = eventos.slice(0, MAX_EVENTOS_POPUP).map(r => `<tr>
-      <td class="nowrap">${formatarDataHora(r.data)}</td>
-      <td>${escaparHtml(capitalizar(r.excecao))}</td>
-      <td class="nowrap"><b>${escaparHtml(r.placa)}</b>${r.carreta ? `<br><small>${escaparHtml(r.carreta)}</small>` : ''}</td>
-      <td>${escaparHtml(r.motorista)}</td>
-      <td class="nowrap">${escaparHtml(r.viagem)}</td>
-      <td>${escaparHtml(abreviarCliente(r.cliente))}</td></tr>`).join('');
-    const restantes = eventos.length - MAX_EVENTOS_POPUP;
-    return `<div class="popup-cabecalho"><b>${escaparHtml(local.local)}</b><span>${formatarNumero(local.total)} eventos · ${formatarNumero(local.nPl)} placas</span></div>
+    const topo = (itens, campo) => itens.slice(0, TOP_NO_POPUP).map(x =>
+      `<li><b>${escaparHtml(x[campo])}</b><span>${formatarNumero(x.total)}</span></li>`).join('');
+    return `<div class="popup-cabecalho"><b>${escaparHtml(local.local)}</b>
+        <span>${formatarNumero(resumo.eventos)} eventos · ${formatarNumero(resumo.placas)} placas · ${formatarNumero(resumo.motoristas)} motoristas · ${formatarNumero(resumo.viagens)} SMs</span>
+        ${resumo.ultimo ? `<span>Último evento: ${formatarDataHora(resumo.ultimo)}</span>` : ''}</div>
       <div class="popup-grupos">${grupos}</div>
       <div class="popup-clientes">${clientes}</div>
-      <div class="popup-eventos"><table><thead><tr><th>Data/hora</th><th>Exceção</th><th>Placa</th><th>Motorista</th><th>SM</th><th>Cliente</th></tr></thead>
-      <tbody>${linhas}</tbody></table></div>
-      ${restantes > 0 ? `<div class="popup-mais">e mais ${formatarNumero(restantes)} eventos neste local (filtre o painel para ver todos)</div>` : ''}`;
+      <div class="popup-topo"><div><h5>Placas</h5><ul>${topo(placas, 'placa')}</ul></div><div><h5>Motoristas</h5><ul>${topo(motoristas, 'motorista')}</ul></div></div>
+      <button class="btn primary small popup-detalhe" data-detalhe>Ver detalhes: placas, motoristas e eventos</button>`;
   }
 
   focar(local) {

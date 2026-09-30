@@ -13,6 +13,7 @@ import { Indicadores } from './ui/Indicadores.js';
 import { Tabelas } from './ui/Tabelas.js';
 import { Graficos } from './ui/Graficos.js';
 import { Mapa } from './ui/Mapa.js';
+import { DetalheLocal } from './ui/DetalheLocal.js';
 import { QualidadeLeitura } from './ui/QualidadeLeitura.js';
 
 export class Painel {
@@ -29,6 +30,7 @@ export class Painel {
     this.tabelas = new Tabelas(this);
     this.graficos = new Graficos(this);
     this.mapa = new Mapa(this);
+    this.detalhe = new DetalheLocal(this);
     this.qualidade = new QualidadeLeitura(this);
     new Atalhos(this);
 

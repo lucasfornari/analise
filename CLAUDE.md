@@ -40,7 +40,7 @@ npx playwright test -g "exporta o CSV"                                   # um te
 index.html        só marcação; carrega CDN, css/* e js/main.js (type="module")
 css/              base (variáveis, botões, utilitários) · layout · filtros · painel · mapa
 js/nucleo/        regras puras, sem DOM: catalogoExcecoes, texto, conversores, colunas,
-                  normalizacao, filtro, agregacao, exportacao
+                  normalizacao, filtro, agregacao, detalheLocal, exportacao
 js/servicos/      leitorXlsx (leitor rápido), lerPlanilha, leitor.worker.js, LeitorPlanilha (worker + reserva)
 js/estado/        Estado: dados, seleção dos filtros, facetas, ordenação/paginação
 js/ui/            um componente (classe) por área da tela
@@ -57,7 +57,7 @@ Regras importantes:
 - `js/nucleo` e `js/servicos` não podem tocar em DOM nem em globais do CDN (dependências injetadas: `unzipSync`, `carregarSheetJs`): é o que permite testá-los em Node e rodá-los no worker.
 - Comparação de textos da planilha sempre via `normalizarChave`; o rótulo exibido é a primeira grafia vista. Datas em texto são **dd/mm/aaaa**, nunca mm/dd; serial do Excel via `dataDoSerialExcel` (horário local).
 - Placas (tabela e reincidência) contam exceções de veículo e contexto; motoristas contam só exceções de motorista. Reincidente = eventos em meses de calendário seguidos; variação mensal = último mês contra o mês de calendário anterior.
-- Mapa: calor com um ponto por local (peso = eventos, teto no percentil 95); marcadores só dos 2 mil maiores locais; clique em qualquer ponto abre os eventos do local mais próximo.
+- Mapa: calor com um ponto por local (peso = eventos, teto no percentil 95); marcadores só dos 2 mil maiores locais; clique em qualquer ponto abre o resumo do local mais próximo. "Ver detalhes" abre `DetalheLocal` (`<dialog>`): abas Placas/Motoristas/Eventos calculadas por `nucleo/detalheLocal.js`, busca, exportação do local e clique para filtrar o painel pela placa/motorista. Com a janela aberta, `Atalhos` fica desligado.
 - Texto vindo da planilha que vai para `innerHTML` passa por `escaparHtml`.
 
 ## Convenções
