@@ -1,8 +1,6 @@
-// Entrada e saída de arquivos: upload (botão ou arrastar), exportação do CSV e mensagens de status.
+// Entrada de arquivos: upload (botão ou arrastar) e mensagens de status da leitura.
 import { $ } from '../util/dom.js';
 import { formatarNumero } from '../util/formatacao.js';
-import { baixarArquivo } from '../util/download.js';
-import { gerarCsv } from '../nucleo/exportacao.js';
 
 export class ControleArquivo {
   constructor(painel) {
@@ -16,7 +14,6 @@ export class ControleArquivo {
       if (arquivo) painel.abrirArquivo(arquivo);
       this.entrada.value = '';   // permite reenviar o mesmo arquivo
     };
-    $('#btnExport').onclick = () => this.exportar();
     this.#habilitarArrastar();
   }
 
@@ -58,7 +55,6 @@ export class ControleArquivo {
     $('#fileInfo').textContent = `${nome} · ${formatarNumero(total)} eventos`;
     this.areaVazia.classList.add('hidden');
     $('#dash').classList.remove('hidden');
-    $('#btnExport').disabled = false;
   }
 
   falhou(nome, erro) {
@@ -67,9 +63,5 @@ export class ControleArquivo {
     $('#errMsg').textContent = erro.message;
     this.areaVazia.classList.remove('hidden');
     $('#dash').classList.add('hidden');
-  }
-
-  exportar() {
-    baixarArquivo('excecoes_filtradas.csv', gerarCsv(this.painel.estado.filtrados), 'text/csv;charset=utf-8');
   }
 }
