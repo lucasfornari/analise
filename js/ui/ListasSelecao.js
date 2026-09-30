@@ -6,16 +6,16 @@ import { formatarNumero, abreviarCliente, capitalizar, escaparHtml } from '../ut
 import { normalizarChave } from '../nucleo/texto.js';
 import { CLASSES, ROTULO_CLASSE, ROTULO_GRUPO } from '../nucleo/catalogoExcecoes.js';
 import { LISTAS } from '../estado/Estado.js';
+import { valorNaLista } from '../nucleo/filtro.js';
 
 const SETA = '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
 const rotuloDoValor = (lista, valor) => lista === 'exc' ? capitalizar(valor) : lista === 'cli' ? abreviarCliente(valor) : valor;
 
 // Principais clientes de cada valor ("COOPERCARGA, SILVIO +2"), para identificar motoristas, placas e perfis.
-function clientesPorValor(registros, campo) {
+function clientesPorValor(registros, lista) {
   const porValor = new Map();
   for (const r of registros) {
-    const valor = r[campo];
-    if (!valor) continue;
+    const valor = valorNaLista(r, lista);
     let m = porValor.get(valor);
     if (!m) porValor.set(valor, m = new Map());
     m.set(r.cliente, (m.get(r.cliente) || 0) + 1);
@@ -105,10 +105,12 @@ export class ListasSelecao {
   #montar(lista) {
     if (this.#montadas.has(lista)) return;
     this.#montadas.add(lista);
-    const { campo } = LISTAS[lista];
     const registros = this.estado.registros;
     const contagem = new Map();
-    for (const r of registros) if (r[campo]) contagem.set(r[campo], (contagem.get(r[campo]) || 0) + 1);
+    for (const r of registros) {
+      const valor = valorNaLista(r, lista);
+      contagem.set(valor, (contagem.get(valor) || 0) + 1);
+    }
     const ordem = [...contagem.keys()].sort((a, b) => contagem.get(b) - contagem.get(a) || a.localeCompare(b));
     const caixa = $(`#${lista}List`);
     const fragmento = document.createDocumentFragment();
@@ -129,7 +131,7 @@ export class ListasSelecao {
         for (const e of itens) fragmento.appendChild(this.#opcao(lista, e, capitalizar(e), ROTULO_GRUPO[definicao.get(e).grupo]));
       }
     } else {
-      const detalhes = lista === 'cli' ? new Map() : clientesPorValor(registros, campo);
+      const detalhes = lista === 'cli' ? new Map() : clientesPorValor(registros, lista);
       for (const valor of ordem) fragmento.appendChild(this.#opcao(lista, valor, valor, detalhes.get(valor)));
     }
     caixa.replaceChildren(fragmento);

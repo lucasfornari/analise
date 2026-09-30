@@ -1,6 +1,6 @@
 // Estado único do painel: dados carregados, seleção dos filtros e preferências de visualização.
 import { CLASSES } from '../nucleo/catalogoExcecoes.js';
-import { CAMPO_DA_LISTA, filtrarComFacetas } from '../nucleo/filtro.js';
+import { CAMPO_DA_LISTA, filtrarComFacetas, valorNaLista } from '../nucleo/filtro.js';
 import { agregar } from '../nucleo/agregacao.js';
 
 // Listas de multisseleção, na ordem do menu: campo do registro e nomes para a interface.
@@ -30,8 +30,8 @@ export class Estado {
 
   carregar(resultado, nomeArquivo) {
     this.registros = resultado.registros;
-    for (const [lista, { campo }] of Object.entries(LISTAS)) {
-      this.universo[lista] = new Set(this.registros.map(r => r[campo]).filter(Boolean));
+    for (const lista of Object.keys(LISTAS)) {
+      this.universo[lista] = new Set(this.registros.map(r => valorNaLista(r, lista)));
     }
     let inicio = null, fim = null;
     const meses = new Set();

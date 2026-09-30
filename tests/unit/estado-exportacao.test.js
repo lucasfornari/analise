@@ -20,7 +20,8 @@ test('Estado: carrega período, universos e começa sem filtro', () => {
   assert.ok(Object.values(f.listas).every(l => l === null), 'tudo marcado = sem filtro');
   estado.recalcular();
   assert.equal(estado.agregado.n, ESPERADO.eventos);
-  assert.equal(estado.facetas.mot.get('JOÃO DA SILVA'), 12);   // inclui os 2 eventos de veículo da placa dele
+  assert.equal(estado.facetas.mot.get('JOÃO DA SILVA'), 12);
+  assert.ok(!estado.universo.mot.has('(em branco)'), 'sem motorista vazio no exemplo, sem opção "(em branco)"');   // inclui os 2 eventos de veículo da placa dele
 });
 
 test('Estado: filtros combinados, isolar item e remover filtro por filtro', () => {

@@ -112,7 +112,7 @@ export class Tabelas {
   #reincidentes() {
     const { meses, reincidencia } = this.estado.agregado;
     const porMotorista = this.modoReincidencia === 'motoristas';
-    const { porMes, lista } = reincidencia[this.modoReincidencia];
+    const { porMes, lista, maximoMensal } = reincidencia[this.modoReincidencia];
     const nome = porMotorista ? 'motorista' : 'placa';
     const listaFiltro = porMotorista ? 'mot' : 'pla';
     $('#reincSub').textContent = `${porMotorista ? 'Motoristas com exceções de motorista' : 'Placas com exceções de veículo ou contexto suspeito'} em meses seguidos. Clique para filtrar`;
@@ -120,7 +120,7 @@ export class Tabelas {
       `<div class="reinc-mes"><b>${formatarPercentual(m.pct ?? 0)}</b> <span>${rotuloMes(m.mes)}: ${formatarNumero(m.reincidentes)} de ${formatarNumero(m.ativos)} ${porMotorista ? 'motoristas' : 'placas'} também tiveram evento em ${rotuloMes(mesAnterior(m.mes))}</span></div>`
     ).join('') || '<div class="apagado">A reincidência mês a mês precisa de pelo menos dois meses seguidos no filtro.</div>';
 
-    const maximo = Math.max(1, ...lista.flatMap(e => meses.map(m => e.m[m] || 0)));
+    const maximo = Math.max(1, maximoMensal);
     const isolado = this.estado.unicoSelecionado(listaFiltro);
     this.tabelas.reinc.renderizar([
       { k: nome, h: porMotorista ? 'Motorista' : 'Placa', cls: 'nowrap', f: r => `<b>${escaparHtml(r[nome])}</b>` },
