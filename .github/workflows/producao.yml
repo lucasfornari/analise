@@ -1,0 +1,44 @@
+# Smoke test no site publicado: roda após cada deploy do GitHub Pages, diariamente
+# (pega quebra de CDN mesmo sem mudança no código) e sob demanda.
+name: Produção
+
+on:
+  deployment_status:
+  schedule:
+    - cron: '17 11 * * *'   # 08:17 em Brasília
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Smoke test no GitHub Pages
+    if: >-
+      github.event_name != 'deployment_status' ||
+      (github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'github-pages')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Define a URL publicada
+        env:
+          URL_DEPLOY: ${{ github.event.deployment_status.environment_url }}
+        run: |
+          URL="${URL_DEPLOY:-https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}/}"
+          echo "PAINEL_URL=${URL%/}/" >> "$GITHUB_ENV"
+          echo "Testando $URL"
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: relatorio-producao
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
