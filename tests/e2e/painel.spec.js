@@ -120,14 +120,13 @@ test.describe('com a planilha carregada', () => {
     await expect(linhas(page, 'tblCliMes').filter({ hasText: 'GAMA' }).locator('.variacao')).toHaveText('▲ novo');
   });
 
-  test('mapa: local mostra placa, motorista, horário e SM dos eventos', async ({ page }) => {
+  test('mapa: clique no local mostra o resumo e o clique direto no mapa encontra o local', async ({ page }) => {
     await linhas(page, 'tblLoc').first().click();                                     // RECIFE - PE, 10 eventos
     const popup = page.locator('.popup-local');
     await expect(popup).toContainText('RECIFE - PE');
-    await expect(popup.locator('.popup-eventos tbody tr')).toHaveCount(10);
-    await expect(popup.locator('.popup-eventos tbody tr').filter({ hasText: 'GHI7J89' }).first()).toContainText('PEDRO LIMA');
-    await expect(popup).toContainText('6001');
-    await expect(popup).toContainText('19/09/2026, 04:15');
+    await expect(popup.locator('.popup-cabecalho')).toContainText('10 eventos · 3 placas · 2 motoristas · 4 SMs');
+    await expect(popup.locator('.popup-cabecalho')).toContainText('Último evento: 19/09/2026, 04:15');
+    await expect(popup.locator('.popup-topo li').first()).toContainText('GHI7J89');
 
     // clique direto no mapa (sobre o calor) abre o local mais próximo; a ponta do popup marca o local
     await esperarRolagem(page);                                                        // o painel rola suave até o mapa
@@ -139,6 +138,48 @@ test.describe('com a planilha carregada', () => {
 
     await page.locator('#mapMode button', { hasText: 'Locais' }).click();
     await expect(page.locator('#map canvas.leaflet-heatmap-layer')).toHaveCount(0);
+  });
+
+  test('mapa: detalhes do local com placas, motoristas, eventos, busca e exportação', async ({ page }) => {
+    await linhas(page, 'tblLoc').first().click();
+    await page.locator('.popup-local [data-detalhe]').click();
+    const janela = page.locator('#detalheLocal');
+    await expect(janela).toBeVisible();
+    await expect(page.locator('#detalheTitulo')).toHaveText('RECIFE - PE');
+    await expect(page.locator('#detalheIndicadores b')).toHaveText(['10', '3', '2', '4', '2']);
+
+    await expect(linhas(page, 'tblDetalhe')).toHaveCount(3);                          // aba Placas
+    await expect(linhas(page, 'tblDetalhe').first()).toContainText('GHI7J89');
+    await expect(linhas(page, 'tblDetalhe').first()).toContainText('PEDRO LIMA (5)');
+    await page.locator('#detalheAbas button', { hasText: 'Motoristas' }).click();
+    await expect(linhas(page, 'tblDetalhe')).toHaveCount(2);
+    await expect(linhas(page, 'tblDetalhe').filter({ hasText: 'ANA COSTA' })).toContainText('JKL0M12 (4), XX123 (1)');
+    await page.locator('#detalheAbas button', { hasText: 'Eventos' }).click();
+    await expect(linhas(page, 'tblDetalhe')).toHaveCount(10);
+    await expect(linhas(page, 'tblDetalhe').first()).toContainText('19/09/2026, 04:15');
+
+    await page.locator('#detalheBusca').fill('7002');                                 // SM
+    await expect(linhas(page, 'tblDetalhe')).toHaveCount(2);
+    await expect(page.locator('#detalheNota')).toHaveText('2 de 10 na busca');
+    await page.keyboard.press('KeyL');                                                // digitar "l" não limpa os filtros do painel
+    await expect(page.locator('#detalheBusca')).toHaveValue('7002l');
+
+    const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#detalheExportar').click()]);
+    expect(download.suggestedFilename()).toBe('excecoes_recife_pe.csv');
+    const texto = (await readFile(await download.path(), 'utf8')).replace(/^\ufeff/, '');
+    expect(texto.split('\r\n')).toHaveLength(11);
+
+    await page.keyboard.press('Escape');
+    await expect(janela).toBeHidden();
+  });
+
+  test('mapa: clicar numa placa nos detalhes filtra o painel por ela', async ({ page }) => {
+    await linhas(page, 'tblLoc').first().click();
+    await page.locator('.popup-local [data-detalhe]').click();
+    await linhas(page, 'tblDetalhe').filter({ hasText: 'JKL0M12' }).click();
+    await expect(page.locator('#detalheLocal')).toBeHidden();
+    await expect(page.locator('#activeFilters')).toContainText('placa JKL0M12');
+    await expect(kpi(page, 0)).toHaveText('5');
   });
 
   test('ordenação das tabelas', async ({ page }) => {

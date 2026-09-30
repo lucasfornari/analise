@@ -61,7 +61,7 @@
     <button class="btn" id="btnReset" title="Limpar todos os filtros: Ctrl+Alt+L (funciona em qualquer lugar) ou tecla L (fora de campo de texto)"><span>Limpar filtros</span><span><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>L</kbd></span></button>
     <div class="side-keys"><kbd>L</kbd> também limpa, quando não estiver digitando</div>
     <div class="side-keys"><kbd>Ctrl</kbd>+<kbd>B</kbd> mostra ou oculta este menu</div>
-    <div class="side-keys" id="appVersion">versão 30/09/2026 · r11</div>
+    <div class="side-keys" id="appVersion">versão 30/09/2026 · r12</div>
   </div>
 </aside>
 
@@ -111,7 +111,7 @@
         </div>
       </div>
       <div id="map"></div>
-      <div class="map-foot"><span class="legend-heat">Menos <i></i> Mais eventos</span><span>Clique num ponto do mapa para ver placa, motorista, horário e SM dos eventos do local</span><span id="mapNote"></span></div>
+      <div class="map-foot"><span class="legend-heat">Menos <i></i> Mais eventos</span><span>Clique num ponto do mapa para ver as placas, motoristas e eventos do local</span><span id="mapNote"></span></div>
     </div>
 
     <div class="grid g-2b">
@@ -182,6 +182,26 @@
       </div>
     </div>
   </section>
+
+  <!-- detalhes de um local do mapa (js/ui/DetalheLocal.js) -->
+  <dialog class="modal" id="detalheLocal" aria-labelledby="detalheTitulo">
+    <div class="modal-cabecalho">
+      <div><h2 id="detalheTitulo"></h2><div class="sub" id="detalheResumo"></div></div>
+      <button class="fly-close" id="detalheFechar" title="Fechar (Esc)" aria-label="Fechar">✕</button>
+    </div>
+    <div class="modal-indicadores" id="detalheIndicadores"></div>
+    <div class="modal-ferramentas">
+      <div class="seg" id="detalheAbas"><button data-v="placas" class="on">Placas</button><button data-v="motoristas">Motoristas</button><button data-v="eventos">Eventos</button></div>
+      <input type="search" id="detalheBusca" placeholder="Buscar placa, carreta, motorista, SM, exceção ou cliente" aria-label="Buscar nos detalhes do local">
+    </div>
+    <div class="tbl-wrap modal-tabela"><table id="tblDetalhe"></table></div>
+    <div class="modal-rodape">
+      <span class="apagado">Clique numa placa ou motorista para filtrar o painel por ele.</span>
+      <span class="apagado" id="detalheNota"></span>
+      <button class="btn small" id="detalheMais">Mostrar mais</button>
+      <button class="btn" id="detalheExportar">Exportar CSV do local</button>
+    </div>
+  </dialog>
 </main>
 </div>
 </body>
