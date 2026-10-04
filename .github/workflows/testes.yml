@@ -18,7 +18,7 @@ concurrency:
 jobs:
   unitarios:
     name: Tipos e unitários
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -31,7 +31,7 @@ jobs:
 
   e2e:
     name: Ponta a ponta (Chromium)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/preparar-playwright
