@@ -20,8 +20,8 @@ jobs:
     name: Tipos e unitários
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -33,11 +33,11 @@ jobs:
     name: Ponta a ponta (Chromium)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/preparar-playwright
       # serve o repositório em /analise/, como o GitHub Pages, e carrega as libs do CDN real
       - run: npm run test:e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: relatorio-e2e

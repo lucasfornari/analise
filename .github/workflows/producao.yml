@@ -1,9 +1,13 @@
-# Smoke test no site publicado: roda após cada deploy do GitHub Pages, diariamente
+# Smoke test no site publicado: roda quando o "Publicar" termina com sucesso, diariamente
 # (pega quebra de CDN mesmo sem mudança no código) e sob demanda.
+# Confere que o site no ar mostra a última versão publicada (Release mais recente) e,
+# após um deploy, exatamente o commit publicado.
 name: Produção
 
 on:
-  deployment_status:
+  workflow_run:
+    workflows: [Publicar]
+    types: [completed]
   schedule:
     - cron: '17 11 * * *'   # 08:17 em Brasília
   workflow_dispatch:
@@ -14,25 +18,24 @@ permissions:
 jobs:
   smoke:
     name: Smoke test no GitHub Pages
-    if: >-
-      github.event_name != 'deployment_status' ||
-      (github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'github-pages')
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/preparar-playwright
-      - name: Define a URL publicada
+      - name: Define a URL e a versão esperadas
         env:
-          URL_DEPLOY: ${{ github.event.deployment_status.environment_url }}
+          GH_TOKEN: ${{ github.token }}
+          COMMIT_PUBLICADO: ${{ github.event.workflow_run.head_sha }}
         run: |
-          URL="${URL_DEPLOY:-https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}/}"
-          echo "PAINEL_URL=${URL%/}/" >> "$GITHUB_ENV"
-          echo "Testando $URL"
-      # após um deploy, confere que o site no ar mostra exatamente o commit publicado
+          echo "PAINEL_URL=https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}/" >> "$GITHUB_ENV"
+          VERSAO=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+          echo "VERSAO_ESPERADA=$VERSAO" >> "$GITHUB_ENV"
+          # só após um deploy há commit para conferir; no agendado vale a versão
+          if [ -n "$COMMIT_PUBLICADO" ]; then echo "COMMIT_ESPERADO=$COMMIT_PUBLICADO" >> "$GITHUB_ENV"; fi
+          echo "Esperado: $VERSAO ${COMMIT_PUBLICADO:-(qualquer commit)}"
       - run: npm run test:e2e
-        env:
-          COMMIT_ESPERADO: ${{ github.event.deployment.sha }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: relatorio-producao

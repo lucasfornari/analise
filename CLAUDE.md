@@ -33,7 +33,8 @@ npx playwright test -g "detalhes do local"                               # um te
 
 - `testes.yml`: todo push fora do `main` roda tipos, unitários e e2e com as libs do CDN real. `.github/actions/preparar-playwright` instala só o `chromium-headless-shell`, sem apt.
 - `publicar.yml` (merge no `main`), dois jobs em sequência: **1. testar** calcula a versão, monta o pacote em `_site/` (só `index.html`, `css/`, `js/`) com `js/config/versao.js` gravado e roda os testes **contra o pacote** (`RAIZ_SITE=_site`); **2. publicar** só roda se o 1 passar (é o único com o ambiente `github-pages`, então nenhum deployment é aberto antes dos testes), publica o pacote testado e cria o tag `vX.Y.Z` + Release. Requer Settings > Pages > Source = "GitHub Actions".
-- `producao.yml`: smoke test (a mesma suíte e2e) contra o site publicado, após cada deploy (conferindo o commit publicado via `COMMIT_ESPERADO`), diariamente e manualmente.
+- `producao.yml`: smoke test (a mesma suíte e2e) contra o site publicado quando o `Publicar` termina com sucesso (`workflow_run`), diariamente e manualmente. Sempre confere a versão da Release mais recente (`VERSAO_ESPERADA`); após um deploy, também o commit publicado (`COMMIT_ESPERADO`).
+- O teste do rodapé tem três cenários (local, pacote via `RAIZ_SITE`, site no ar via `PAINEL_URL`): ao mudar a versão ou o deploy, valide os três (ver comandos acima).
 
 ## Versionamento
 

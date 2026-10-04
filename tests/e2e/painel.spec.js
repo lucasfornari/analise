@@ -19,16 +19,20 @@ test('carrega a página com as bibliotecas do CDN', async ({ page }) => {
   await expect(page.locator('.acc-sec')).toHaveCount(5);
 });
 
+// Três cenários: local (repositório), pacote do deploy (RAIZ_SITE) e site no ar (PAINEL_URL).
+// Nos dois últimos a versão é semântica; VERSAO_ESPERADA e COMMIT_ESPERADO, quando informados,
+// conferem exatamente o que foi publicado (o smoke agendado não tem commit, só a versão).
 test('rodapé mostra a versão publicada (ou execução local)', async ({ page }) => {
+  const { VERSAO_ESPERADA, COMMIT_ESPERADO, PAINEL_URL, RAIZ_SITE } = process.env;
   const versao = page.locator('#appVersion');
-  if (process.env.COMMIT_ESPERADO) {
-    // pacote do deploy ou site no ar: versão semântica e exatamente o commit publicado
-    await expect(versao).toHaveText(/^v\d+\.\d+\.\d+ · \d{2}\/\d{2}\/\d{4}$/);
-    await expect(versao).toHaveAttribute('data-commit', process.env.COMMIT_ESPERADO);
-    await expect(versao.locator('a')).toHaveAttribute('href', /\/releases\/tag\/v\d+\.\d+\.\d+$/);
-  } else {
+  if (!PAINEL_URL && !RAIZ_SITE) {
     await expect(versao).toHaveText('versão local (desenvolvimento)');
+    return;
   }
+  await expect(versao).toHaveText(/^v\d+\.\d+\.\d+ · \d{2}\/\d{2}\/\d{4}$/);
+  await expect(versao.locator('a')).toHaveAttribute('href', /\/releases\/tag\/v\d+\.\d+\.\d+$/);
+  if (VERSAO_ESPERADA) await expect(versao).toHaveText(new RegExp(`^${VERSAO_ESPERADA.replace(/\./g, '\\.')} · `));
+  if (COMMIT_ESPERADO) await expect(versao).toHaveAttribute('data-commit', COMMIT_ESPERADO);
 });
 
 for (const nome of Object.keys(PLANILHAS)) {

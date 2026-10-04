@@ -24,7 +24,7 @@ jobs:
     outputs:
       versao: ${{ steps.versao.outputs.versao }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0   # histórico e tags para calcular a versão
       - uses: ./.github/actions/preparar-playwright
@@ -54,7 +54,8 @@ jobs:
         env:
           RAIZ_SITE: _site
           COMMIT_ESPERADO: ${{ github.sha }}
-      - uses: actions/upload-artifact@v4
+          VERSAO_ESPERADA: ${{ steps.versao.outputs.versao }}
+      - uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: relatorio-publicacao
