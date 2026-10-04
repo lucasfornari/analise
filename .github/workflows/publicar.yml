@@ -20,7 +20,7 @@ concurrency:
 jobs:
   testar:
     name: 1. Testar o pacote
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       versao: ${{ steps.versao.outputs.versao }}
     steps:
@@ -72,7 +72,7 @@ jobs:
   publicar:
     name: 2. Publicar e versionar
     needs: testar
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write   # tag e Release
       pages: write
