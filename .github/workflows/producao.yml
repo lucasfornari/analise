@@ -1,5 +1,6 @@
-# Smoke test no site publicado: roda quando o "Publicar" termina com sucesso, diariamente
-# (pega quebra de CDN mesmo sem mudança no código) e sob demanda.
+# Smoke test no site publicado: roda quando o "Publicar" termina com sucesso e sob demanda.
+# A execução diária (pega quebra de CDN mesmo sem mudança no código) está desligada; para
+# religar, descomente o schedule abaixo.
 # Confere que o site no ar mostra a última versão publicada (Release mais recente) e,
 # após um deploy, exatamente o commit publicado.
 name: Produção
@@ -8,8 +9,8 @@ on:
   workflow_run:
     workflows: [Publicar]
     types: [completed]
-  schedule:
-    - cron: '17 11 * * *'   # 08:17 em Brasília
+  # schedule:
+  #   - cron: '17 11 * * *'   # 08:17 em Brasília
   workflow_dispatch:
 
 permissions:
