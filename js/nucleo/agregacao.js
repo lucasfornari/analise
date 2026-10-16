@@ -15,6 +15,9 @@ const incrementar = (mapa, chave) => mapa.set(chave, (mapa.get(chave) || 0) + 1)
 const maisFrequente = mapa => { let melhor = '', n = -1; for (const [k, v] of mapa) if (v > n) { melhor = k; n = v; } return [melhor, Math.max(n, 0)]; };
 const porTotalDepois = campo => (a, b) => b.total - a.total || String(a[campo]).localeCompare(String(b[campo]));
 const porClasseZerada = () => ({ MOTORISTA: 0, VEICULO: 0, CONTEXTO: 0 });
+// Ponto do mapa = coordenada arredondada em 5 casas (~1 m), sem olhar a referência em texto.
+// Chave numérica (mais rápida que texto num Map com ~120 mil coordenadas): latitude e longitude inteiras lado a lado.
+export const chaveCoordenada = (lat, lon) => Math.round(lat * 1e5) * 4e7 + Math.round(lon * 1e5);
 
 // '2026-01' -> '2025-12'
 export function mesAnterior(mes) {
@@ -67,11 +70,20 @@ export function reincidencia(entidades, meses) {
   return { porMes, lista, maximoMensal };
 }
 
+// Resumo de um ponto do mapa, calculado só quando ele é desenhado ou aberto (o export real tem ~120 mil coordenadas).
+// local: a referência mais frequente na coordenada, usada como título.
+export function completarPonto(ponto) {
+  if (ponto.grupos) return ponto;
+  const grupos = new Map(), cli = new Map(), referencias = new Map();
+  for (const r of ponto.eventos) { incrementar(grupos, r.grupo); incrementar(cli, r.cliente); incrementar(referencias, r.referencia || '(sem referência)'); }
+  return Object.assign(ponto, { grupos, cli, referencias, local: maisFrequente(referencias)[0] });
+}
+
 export function agregar(registros) {
   const n = registros.length;
   const porClasse = porClasseZerada();
   const grupos = new Map(), excecoes = new Map(), porMes = new Map();
-  const clientes = new Map(), locais = new Map(), placas = new Map(), motoristas = new Map(), perfis = new Map();
+  const clientes = new Map(), locais = new Map(), pontos = new Map(), placas = new Map(), motoristas = new Map(), perfis = new Map();
   let geo = 0;
 
   for (const r of registros) {
@@ -94,10 +106,17 @@ export function agregar(registros) {
     if (r.mes) c.m[r.mes] = (c.m[r.mes] || 0) + 1;
 
     let l = locais.get(r.local);
-    if (!l) locais.set(r.local, l = { local: r.local, total: 0, grupos: new Map(), cli: new Map(), placas: new Set(), somaLat: 0, somaLon: 0, nc: 0, eventos: [] });
+    if (!l) locais.set(r.local, l = { local: r.local, total: 0, grupos: new Map(), cli: new Map(), placas: new Set(), eventos: [] });
     l.total++; incrementar(l.grupos, r.grupo); incrementar(l.cli, r.cliente); l.eventos.push(r);
     if (r.placa) l.placas.add(r.placa);
-    if (r.lat != null) { l.somaLat += r.lat; l.somaLon += r.lon; l.nc++; geo++; }
+
+    if (r.lat != null) {
+      geo++;
+      const chave = chaveCoordenada(r.lat, r.lon);
+      let pt = pontos.get(chave);
+      if (!pt) pontos.set(chave, pt = { chave, lat: r.lat, lon: r.lon, total: 0, eventos: [] });
+      pt.total++; pt.eventos.push(r);
+    }
 
     // placas: equipamento e contexto; motoristas: exceções de motorista
     if (r.classe !== CLASSE.MOTORISTA && r.placa) {
@@ -153,9 +172,9 @@ export function agregar(registros) {
     grupos, excecoes: [...excecoes.values()].sort(porTotalDepois('excecao')),
     meses, mesClasse,
     clientes: listaClientes,
-    locais: [...locais.values()].map(l => Object.assign(l, {
-      nCli: l.cli.size, nPl: l.placas.size, lat: l.nc ? l.somaLat / l.nc : null, lon: l.nc ? l.somaLon / l.nc : null
-    })).sort(porTotalDepois('local')),
+    // locais: agrupados pela referência em texto (tabela); pontos: pela coordenada (mapa)
+    locais: [...locais.values()].map(l => Object.assign(l, { nCli: l.cli.size, nPl: l.placas.size })).sort(porTotalDepois('local')),
+    pontos: [...pontos.values()].sort((a, b) => b.total - a.total),
     placas: listaPlacas,
     motoristas: listaMotoristas,
     perfis: [...perfis.values()].map(pf => Object.assign(pf, { cliente: maisFrequente(pf.clis)[0], nCli: pf.clis.size }))

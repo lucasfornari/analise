@@ -20,3 +20,7 @@ export const CENTRO_BRASIL = [-15.8, -50];
 
 // gradiente do mapa de calor (também desenhado na legenda em css/mapa.css)
 export const GRADIENTE_CALOR = { 0.15: '#2C28A8', 0.4: '#6C69D9', 0.7: '#9CFF9C', 1: '#00FF00' };
+
+// Agrupamento dos pontos: raio em pixels e zoom a partir do qual cada coordenada aparece sozinha
+// (zoom 14 ≈ 10 m por pixel: pontos a poucos metros já ficam separados).
+export const AGRUPAMENTO = { raio: 40, zoomIndividual: 14 };

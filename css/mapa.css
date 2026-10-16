@@ -13,6 +13,9 @@ input[type=range]{accent-color:var(--navy);width:110px;vertical-align:middle}
 .leaflet-popup-content{font-family:var(--f);font-size:12.5px;margin:10px 12px}
 .leaflet-popup-content b{color:var(--navy)}
 
+/* grupo de pontos próximos (mapa afastado): bolha com o total de eventos */
+.grupo-mapa{display:grid;place-items:center;border-radius:50%;background:rgba(108,105,217,.88);border:2px solid var(--neon);box-shadow:0 0 0 4px rgba(108,105,217,.3);color:#fff;font:600 11px/1 var(--f);cursor:pointer}
+
 /* popup de resumo do local */
 .popup-local .leaflet-popup-content{margin:12px 14px}
 .popup-cabecalho{display:flex;flex-direction:column;gap:2px;margin-bottom:6px}
@@ -23,6 +26,7 @@ input[type=range]{accent-color:var(--navy);width:110px;vertical-align:middle}
 .leaflet-container a.icone-mapa:hover{color:var(--navy)}
 .popup-local .icone-mapa svg{width:15px;height:15px}
 .popup-cabecalho span,.popup-clientes{color:var(--muted);font-size:12px}
+.popup-coordenada{font-variant-numeric:tabular-nums}
 .popup-grupos{margin-bottom:4px}
 .popup-topo{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0 10px}
 .popup-topo h5{margin:0 0 2px;font-family:var(--fc);font-size:13px;color:var(--navy)}

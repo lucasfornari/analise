@@ -52,7 +52,7 @@ Use esses prefixos nos títulos de PR e commits. Não edite a versão à mão: n
 index.html        só marcação; carrega CDN, css/* e js/main.js (type="module")
 css/              base (variáveis, botões, utilitários) · layout · filtros · painel · mapa
 js/nucleo/        regras puras, sem DOM: catalogoExcecoes, texto, conversores, colunas,
-                  normalizacao, filtro, agregacao, detalheLocal, exportacao
+                  normalizacao, filtro, agregacao, agrupamentoMapa, detalheLocal, exportacao
 js/servicos/      leitorXlsx (leitor rápido), lerPlanilha, leitor.worker.js, LeitorPlanilha (worker + reserva)
 js/estado/        Estado: dados, seleção dos filtros, facetas, ordenação/paginação
 js/ui/            um componente (classe) por área da tela
@@ -69,7 +69,7 @@ Regras importantes:
 - `js/nucleo` e `js/servicos` não podem tocar em DOM nem em globais do CDN (dependências injetadas: `unzipSync`, `carregarSheetJs`): é o que permite testá-los em Node e rodá-los no worker.
 - Comparação de textos da planilha sempre via `normalizarChave`; o rótulo exibido é a primeira grafia vista. Datas em texto são **dd/mm/aaaa**, nunca mm/dd; serial do Excel via `dataDoSerialExcel` (horário local).
 - Placas (tabela e reincidência) contam exceções de veículo e contexto; motoristas contam só exceções de motorista. Reincidente = eventos em meses de calendário seguidos; variação mensal = último mês contra o mês de calendário anterior.
-- Mapa: calor com um ponto por local (peso = eventos, teto no percentil 95); marcadores só dos 2 mil maiores locais; clique em qualquer ponto abre o resumo do local mais próximo. "Ver detalhes" abre `DetalheLocal` (`<dialog>`): abas Placas/Motoristas/Eventos calculadas por `nucleo/detalheLocal.js`, busca, exportação do local e clique para filtrar o painel pela placa/motorista. Com a janela aberta, `Atalhos` fica desligado.
+- Mapa: **um ponto por coordenada** (`agregado.pontos`, lat/long arredondadas em 5 casas ≈ 1 m), nunca pela referência em texto — `agregado.locais` (agrupado pela referência, sem a distância "x km de") é só para a tabela "Locais ofensores". Pontos são leves (o export real tem ~120 mil coordenadas): grupos, clientes e referências só via `completarPonto` ao desenhar/abrir. Calor com peso = eventos do ponto e teto no percentil 95 das células do leaflet.heat (`tetoDoCalor`). Marcadores: com o mapa afastado, pontos a menos de 40 px viram um grupo (`nucleo/agrupamentoMapa.js`, configurado em `AGRUPAMENTO` de `config/mapa.js`); a partir do zoom 14 cada coordenada aparece sozinha. Só a área visível é desenhada (no máximo 2 mil). Clique num grupo aproxima o mapa; numa coordenada (ou no calor perto dela) abre o resumo. Clicar num local da tabela vai às suas coordenadas. "Ver detalhes" abre `DetalheLocal` (`<dialog>`) da coordenada: abas Placas/Motoristas/Eventos calculadas por `nucleo/detalheLocal.js`, busca, exportação do local e clique para filtrar o painel pela placa/motorista. Com a janela aberta, `Atalhos` fica desligado.
 - Texto vindo da planilha que vai para `innerHTML` passa por `escaparHtml`.
 
 ## Convenções
