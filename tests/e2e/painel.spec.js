@@ -156,8 +156,16 @@ test.describe('com a planilha carregada', () => {
     await page.mouse.click(ponta.x + ponta.width / 2, ponta.y + ponta.height + 12);
     await expect(popup).toContainText('RECIFE - PE');
 
-    await page.locator('#mapMode button', { hasText: 'Locais' }).click();
+    // modo Locais: clique direto no marcador abre o resumo e, dele, a janela de detalhes
+    const mapa = page.locator('#map'), antes = await mapa.boundingBox();
+    await page.locator('#mapMode button', { hasText: 'Locais' }).click();              // o Playwright rola a página até o botão
     await expect(page.locator('#map canvas.leaflet-heatmap-layer')).toHaveCount(0);
+    await expect(popup).toBeHidden();                                                  // trocar o modo redesenha e fecha o popup
+    await mapa.scrollIntoViewIfNeeded();
+    const depois = await mapa.boundingBox();                                           // o ponto continua no mesmo lugar do mapa
+    await page.mouse.click(ponta.x + ponta.width / 2 - antes.x + depois.x, ponta.y + ponta.height + 8 - antes.y + depois.y);
+    await popup.locator('[data-detalhe]').click();
+    await expect(page.locator('#detalheTitulo')).toHaveText('RECIFE - PE');
   });
 
   test('mapa: afastado agrupa pontos próximos e aproximado mostra cada coordenada', async ({ page }) => {
