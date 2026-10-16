@@ -36,3 +36,6 @@ export const formatarDataHora = data => data ? data.toLocaleString('pt-BR', { da
 
 // Rodapé: "v0.1.0 · 30/09/2026" no site publicado; sem versão gravada, é execução local.
 export const textoDaVersao = ({ versao, data }) => versao ? `${versao} · ${data}` : 'versão local (desenvolvimento)';
+
+// -8.05, -34.9 -> "-8.05000, -34.90000": ponto decimal, para colar em ferramentas de mapa; 5 casas ≈ 1 m
+export const formatarCoordenada = ({ lat, lon }) => `${lat.toFixed(5)}, ${lon.toFixed(5)}`;

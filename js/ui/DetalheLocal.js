@@ -1,7 +1,7 @@
-// Janela de detalhes de um local do mapa: placas, motoristas e todos os eventos, com busca e exportação.
+// Janela de detalhes de um ponto do mapa (uma coordenada): placas, motoristas e todos os eventos, com busca e exportação.
 // Clicar numa placa ou num motorista filtra o painel inteiro por ele.
 import { $, $$ } from '../util/dom.js';
-import { formatarNumero, escaparHtml, abreviarCliente, capitalizar, formatarDataHora } from '../util/formatacao.js';
+import { formatarNumero, escaparHtml, abreviarCliente, capitalizar, formatarDataHora, formatarCoordenada } from '../util/formatacao.js';
 import { baixarArquivo } from '../util/download.js';
 import { iconeGoogleMaps } from '../util/links.js';
 import { CLASSE_DO_GRUPO, ROTULO_GRUPO, ROTULO_CLASSE } from '../nucleo/catalogoExcecoes.js';
@@ -62,11 +62,11 @@ export class DetalheLocal {
   #renderizarCabecalho() {
     const { resumo } = this.detalhe;
     $('#detalheTitulo').textContent = this.local.local;
-    // coordenada tratada do local: média das coordenadas válidas dos eventos
     $('#detalheGoogleMaps').innerHTML = this.local.lat == null ? '' : iconeGoogleMaps(this.local.lat, this.local.lon);
-    $('#detalheResumo').textContent = resumo.primeiro
+    const periodo = resumo.primeiro
       ? `De ${formatarDataHora(resumo.primeiro)} a ${formatarDataHora(resumo.ultimo)}, com os filtros atuais do painel`
       : 'Com os filtros atuais do painel';
+    $('#detalheResumo').textContent = this.local.lat == null ? periodo : `Coordenada ${formatarCoordenada(this.local)} · ${periodo}`;
     $('#detalheIndicadores').innerHTML = [
       [resumo.eventos, 'eventos'], [resumo.placas, 'placas'], [resumo.motoristas, 'motoristas'],
       [resumo.viagens, 'SMs'], [resumo.clientes, 'clientes']

@@ -47,7 +47,7 @@ for (const nome of Object.keys(PLANILHAS)) {
     await expect(linhas(page, 'tblPlaca')).toHaveCount(5);
     await expect(linhas(page, 'tblPer')).toHaveCount(3);
     expect(await page.evaluate(() => ['chGrupo', 'chMes', 'chExc'].map(id => !!Chart.getChart(id)))).toEqual([true, true, true]);
-    await expect(page.locator('#mapSub')).toHaveText('26 eventos georreferenciados em 3 locais');
+    await expect(page.locator('#mapSub')).toHaveText('26 eventos georreferenciados em 4 pontos');
     await expect(page.locator('#quality')).toContainText('Classe corrigida pelo catálogo: 3');
     await expect(page.locator('#quality .fora-catalogo')).toContainText('Excecao nova de teste (1)');
   });
@@ -142,6 +142,7 @@ test.describe('com a planilha carregada', () => {
     await expect(popup).toContainText('RECIFE - PE');
     await expect(popup.locator('.popup-cabecalho')).toContainText('10 eventos · 3 placas · 2 motoristas · 4 SMs');
     await expect(popup.locator('.popup-cabecalho')).toContainText('Último evento: 19/09/2026, 04:15');
+    await expect(popup.locator('.popup-coordenada')).toHaveText('-8.05000, -34.90000');
     await expect(popup.locator('.popup-topo li').first()).toContainText('GHI7J89');
     const gmapsPopup = popup.locator('.popup-titulo a.icone-mapa');                  // ícone já no popup, sem abrir os detalhes
     await expect(gmapsPopup).toHaveAttribute('href', 'https://www.google.com/maps/search/?api=1&query=-8.050000,-34.900000');
@@ -159,6 +160,36 @@ test.describe('com a planilha carregada', () => {
     await expect(page.locator('#map canvas.leaflet-heatmap-layer')).toHaveCount(0);
   });
 
+  test('mapa: afastado agrupa pontos próximos e aproximado mostra cada coordenada', async ({ page }) => {
+    const grupos = page.locator('#map .grupo-mapa'), nota = page.locator('#mapNote');
+    const semAnimacao = () => page.waitForFunction(() => !document.querySelector('#map .leaflet-zoom-anim'));
+    // a projeção usada no agrupamento é a mesma do Leaflet
+    const diferenca = await page.evaluate(async () => {
+      const { projetar } = await import('./js/nucleo/agrupamentoMapa.js');
+      const [x, y] = projetar(-24.89564, -53.42362, 11), p = L.CRS.EPSG3857.latLngToPoint(L.latLng(-24.89564, -53.42362), 11);
+      return Math.hypot(x - p.x, y - p.y);
+    });
+    expect(diferenca).toBeLessThan(1e-6);
+
+    // "POSTO LETICIA" é um local na tabela, mas tem duas coordenadas (~1,4 km): aproximado, dois pontos
+    await page.locator('#mapMode button', { hasText: 'Locais' }).click();
+    await linhas(page, 'tblLoc').filter({ hasText: 'POSTO LETICIA' }).click();
+    await esperarRolagem(page);
+    await semAnimacao();
+    await expect(grupos).toHaveCount(0);
+    await expect(nota).not.toContainText('agrupados');
+
+    for (let i = 0; i < 6; i++) { await page.locator('.leaflet-control-zoom-out').click(); await semAnimacao(); }
+    const cascavel = grupos.filter({ hasText: /^8$/ });                              // 7 + 1 eventos, num grupo só
+    await expect(cascavel).toHaveCount(1);
+    await expect(cascavel).toHaveAttribute('title', '2 pontos · 8 eventos');
+    await expect(nota).toContainText('pontos próximos agrupados');
+
+    await cascavel.click();                                                           // aproxima até separar
+    await expect(grupos).toHaveCount(0);
+    await expect(page.locator('.popup-local')).toHaveCount(0);
+  });
+
   test('mapa: detalhes do local com placas, motoristas, eventos, busca e exportação', async ({ page }) => {
     await linhas(page, 'tblLoc').first().click();
     await page.locator('.popup-local [data-detalhe]').click();
@@ -170,6 +201,7 @@ test.describe('com a planilha carregada', () => {
     await expect(gmaps).toHaveAttribute('target', '_blank');
     await expect(gmaps).toHaveText('');
     await expect(page.locator('#detalheIndicadores b')).toHaveText(['10', '3', '2', '4', '2']);
+    await expect(page.locator('#detalheResumo')).toContainText('Coordenada -8.05000, -34.90000 · De 20/08/2026');
 
     await expect(linhas(page, 'tblDetalhe')).toHaveCount(3);                          // aba Placas
     await expect(linhas(page, 'tblDetalhe').first()).toContainText('GHI7J89');
