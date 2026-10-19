@@ -139,7 +139,7 @@ test.describe('com a planilha carregada', () => {
   test('exceções pelo nome: etiquetas na tabela e tooltip ao passar o mouse no motorista', async ({ page }) => {
     const joao = linhas(page, 'tblMot').filter({ hasText: 'JOÃO DA SILVA' });
     await expect(joao.locator('.tag.exc').first()).toHaveText('Velocidade excedida faixa 1 7');
-    await expect(joao.locator('.tag.mais')).toHaveText('+3');                         // 4 tipos: a principal na célula + 3
+    await expect(joao.locator('.tag.mais')).toHaveText('+2');                         // 4 tipos: 2 na célula + 2
     const dica = page.locator('#dica');
     await joao.locator('td').first().hover();
     await expect(dica).toBeVisible();

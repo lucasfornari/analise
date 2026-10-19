@@ -90,7 +90,8 @@ export class Mapa {
     if (this.modo !== 'points' && pontos.length) this.#desenharCalor(pontos);
 
     const semCoordenada = this.estado.filtrados.length - this.estado.agregado.geo;
-    this.notaFixa = semCoordenada ? `${formatarNumero(semCoordenada)} eventos sem coordenada ficaram fora do mapa` : '';
+    this.notaFixa = !semCoordenada ? '' : semCoordenada === 1 ? '1 evento sem coordenada ficou fora do mapa'
+      : `${formatarNumero(semCoordenada)} eventos sem coordenada ficaram fora do mapa`;
     $('#mapSub').textContent = `${formatarNumero(this.estado.agregado.geo)} eventos georreferenciados em ${formatarNumero(pontos.length)} pontos`;
     if (ajustar && pontos.length) {
       this.mapa.fitBounds(L.latLngBounds(pontos.map(p => [p.lat, p.lon])).pad(0.08), { maxZoom: 12 });

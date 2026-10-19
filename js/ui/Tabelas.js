@@ -66,7 +66,6 @@ export class Tabelas {
   }
 
   // Coluna "Principais exceções" (nome + quantidade) e o tooltip com a lista completa da linha.
-  // Nas tabelas em meia largura, só a principal + "+N"; o tooltip mostra todas.
   #colunaExcecoes(limite = 2, dica = r => this.#dica(r)) {
     return { k: 'excecoes', h: 'Principais exceções', v: r => r.total, cls: 'col-excecoes', f: r => etiquetasExcecoes(r.porExcecao, this.classeDe, limite), dica };
   }
@@ -163,7 +162,7 @@ export class Tabelas {
       { k: 'total', h: 'Eventos', num: true, f: negrito('total') },
       { k: 'nPl', h: 'Placas', num: true },
       { k: 'nCli', h: 'Clientes', num: true },
-      this.#colunaExcecoes(1)
+      this.#colunaExcecoes()
     ], locais, { limite: this.estado.limites.loc, aoClicar: r => this.painel.mapa.focar(r) });
     this.#botaoMais('loc', locais.length);
   }
@@ -176,7 +175,7 @@ export class Tabelas {
       { k: 'cliente', h: 'Cliente', cls: 'nowrap', f: cliente(22) },
       { k: 'total', h: 'Eventos', num: true, f: negrito('total') },
       { k: 'nViagens', h: 'SMs', num: true },
-      this.#colunaExcecoes(1, r => this.#dicaPlaca(r)),
+      this.#colunaExcecoes(2, r => this.#dicaPlaca(r)),
       { k: 'tecnologia', h: 'Tecnologia' }
     ], placas, {
       limite: this.estado.limites.placa, aoClicar: r => this.#isolar('pla', r.placa), selecionada: r => r.placa === isolada
@@ -192,7 +191,7 @@ export class Tabelas {
       { k: 'cliente', h: 'Cliente', cls: 'nowrap', f: cliente(20) },
       { k: 'total', h: 'Eventos', num: true, f: negrito('total') },
       { k: 'nPlacas', h: 'Placas', num: true },
-      this.#colunaExcecoes(1, r => this.#dicaMotorista(r))
+      this.#colunaExcecoes(2, r => this.#dicaMotorista(r))
     ], motoristas, {
       limite: this.estado.limites.mot, aoClicar: r => this.#isolar('mot', r.motorista), selecionada: r => r.motorista === isolado
     });

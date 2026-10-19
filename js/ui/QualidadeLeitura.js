@@ -24,8 +24,8 @@ export class QualidadeLeitura {
       ['Duplicados exatos', formatarNumero(e.duplicadas)],
       ['Período', `${formatarDia(meta.inicio)} a ${formatarDia(meta.fim)}`],
       ['Clientes', formatarNumero(universo.cli.size)],
-      ['Motoristas', formatarNumero(universo.mot.size)],
-      ['Placas', formatarNumero(universo.pla.size)],
+      ['Motoristas (todas as classes)', formatarNumero(universo.mot.size)],
+      ['Placas (todas as classes)', formatarNumero(universo.pla.size)],
       ['Tipos de exceção', formatarNumero(universo.exc.size)],
       ['Perfis de segurança', formatarNumero(universo.per.size)]
     ];
