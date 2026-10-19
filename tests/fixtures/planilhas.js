@@ -105,6 +105,18 @@ export function linhasEmMassa(n, excecoes) {
   return [...linhas, [], ...RODAPE];
 }
 
+// Espalha as datas das exceções pelos n meses que terminam em ago/2026 (tabelas e gráficos mês a mês).
+export function espalharEmMeses(linhas, n) {
+  const iData = CABECALHO.indexOf('Data Excecao');
+  return linhas.map((l, i) => {
+    if (!i || typeof l[iData] !== 'number') return l;
+    const atras = (i * 7) % n, total = 2026 * 12 + 7 - atras;   // meses desde o ano 0; 7 = agosto (0 = janeiro)
+    const copia = [...l];
+    copia[iData] = serialExcel(Math.floor(total / 12), total % 12 + 1, 1 + (i % 28), i % 24, 0);
+    return copia;
+  });
+}
+
 const escaparXml = v => String(v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 // Mesmo formato do export do BI: prefixo "x:", strings inline, sem referência de célula, vazio = string vazia.

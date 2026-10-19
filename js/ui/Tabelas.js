@@ -8,6 +8,8 @@ import { Tabela } from './Tabela.js';
 import { etiquetasExcecoes, dicaExcecoes } from './etiquetasExcecoes.js';
 
 const INCREMENTO_PAGINA = 35;
+// Tabelas mês a mês: até 6 meses recentes, reduzindo até 3 se a tela não comportar sem rolagem horizontal.
+const MESES_NA_TABELA = 6, MESES_MINIMO = 3;
 const SIGLA_CLASSE = { MOTORISTA: 'Mot.', VEICULO: 'Veíc.', CONTEXTO: 'CS' };
 
 // Colunas reaproveitadas entre tabelas
@@ -36,6 +38,7 @@ const celulaCalor = (valor, maximo) => valor
 
 export class Tabelas {
   modoReincidencia = 'motoristas';   // 'motoristas' | 'placas'
+  todosOsMeses = { cliMes: false, reinc: false };
 
   constructor(painel) {
     this.painel = painel;
@@ -45,6 +48,10 @@ export class Tabelas {
       cli: nova('#tblCli', 'cli'), cliMes: nova('#tblCliMes', 'cliMes'), reinc: nova('#tblReinc', 'reinc'),
       loc: nova('#tblLoc', 'loc'), placa: nova('#tblPlaca', 'placa'), mot: nova('#tblMot', 'mot'), per: nova('#tblPer', 'per')
     };
+    $$('[data-meses]').forEach(b => b.onclick = () => {
+      this.todosOsMeses[b.dataset.meses] = !this.todosOsMeses[b.dataset.meses];
+      this.renderizar();
+    });
     const botoes = $$('#reincModo button');
     botoes.forEach(b => b.onclick = () => {
       this.modoReincidencia = b.dataset.v;
@@ -84,6 +91,20 @@ export class Tabelas {
       `Local mais frequente: ${escaparHtml(r.topLocal)} (${formatarNumero(r.topLocalN)})`]);
   }
 
+  // Desenha a tabela com os meses mais recentes que cabem na largura (de 6 a 3), ou com todos
+  // (1ª coluna fixa e rolagem horizontal). Só muda a exibição: variação, sequência e totais usam todos os meses.
+  #ajustarMeses(chave, meses, desenhar) {
+    const todos = this.todosOsMeses[chave], area = this.tabelas[chave].elemento.parentElement;
+    const transborda = () => area.scrollWidth > area.clientWidth + 1;
+    let n = todos ? meses.length : Math.min(MESES_NA_TABELA, meses.length);
+    desenhar(meses.slice(meses.length - n));
+    while (!todos && n > MESES_MINIMO && transborda()) desenhar(meses.slice(meses.length - --n));
+    const botao = $(`[data-meses="${chave}"]`);
+    botao.classList.toggle('hidden', !todos && n === meses.length);
+    botao.textContent = todos ? 'Só os meses recentes' : `Ver os ${meses.length} meses`;
+    area.classList.toggle('todos-os-meses', todos);
+  }
+
   // Clicar numa linha isola o painel no item (cliente, placa, motorista, perfil); clicar de novo desfaz.
   #isolar(lista, valor) {
     this.estado.alternarUnico(lista, valor);
@@ -107,20 +128,19 @@ export class Tabelas {
   // Uma coluna por mês com eventos e participação do cliente no total daquele mês.
   #clientesMensal() {
     const { clientes, meses } = this.estado.agregado;
-    const colunasMes = meses.map(m => ({
-      k: 'mes-' + m, h: rotuloMes(m), num: true, v: r => r.m[m] || 0,
-      f: r => `${formatarNumero(r.m[m] || 0)} <small class="apagado">${formatarPercentual(r.pctMes[m])}</small>`
-    }));
     const ultimo = meses[meses.length - 1];
     const tituloVariacao = ultimo ? `${rotuloMes(ultimo)} × ${rotuloMes(mesAnterior(ultimo))}` : 'Variação';
-    this.tabelas.cliMes.renderizar([
+    this.#ajustarMeses('cliMes', meses, visiveis => this.tabelas.cliMes.renderizar([
       { k: 'cliente', h: 'Cliente', cls: 'nowrap', f: r => escaparHtml(abreviarCliente(r.cliente)), dica: r => this.#dica(r) },
-      ...colunasMes,
+      ...visiveis.map(m => ({
+        k: 'mes-' + m, h: rotuloMes(m), num: true, v: r => r.m[m] || 0,
+        f: r => `${formatarNumero(r.m[m] || 0)} <small class="apagado">${formatarPercentual(r.pctMes[m])}</small>`
+      })),
       { k: 'total', h: 'Total', num: true, f: negrito('total') },
       { k: 'variacao', h: tituloVariacao, num: true, v: ordenarVariacao, f: r => celulaVariacao(r.variacao) },
       { k: 'diferenca', h: 'Diferença', num: true, v: r => r.variacao?.diferenca ?? 0,
         f: r => r.variacao ? `${r.variacao.diferenca > 0 ? '+' : ''}${formatarNumero(r.variacao.diferenca)}` : '<span class="apagado">–</span>' }
-    ], clientes, { limite: this.estado.limites.cliMes, aoClicar: r => this.#isolar('cli', r.cliente) });
+    ], clientes, { limite: this.estado.limites.cliMes, aoClicar: r => this.#isolar('cli', r.cliente) }));
     this.#botaoMais('cliMes', clientes.length);
   }
 
@@ -132,17 +152,22 @@ export class Tabelas {
     const nome = porMotorista ? 'motorista' : 'placa';
     const listaFiltro = porMotorista ? 'mot' : 'pla';
     $('#reincSub').textContent = `${porMotorista ? 'Motoristas com exceções de motorista' : 'Placas com exceções de veículo ou contexto suspeito'} em meses seguidos. Clique para filtrar`;
-    $('#reincResumo').innerHTML = porMes.filter(m => m.reincidentes !== null).map(m =>
-      `<div class="reinc-mes"><b>${formatarPercentual(m.pct ?? 0)}</b> <span>${rotuloMes(m.mes)}: ${formatarNumero(m.reincidentes)} de ${formatarNumero(m.ativos)} ${porMotorista ? 'motoristas' : 'placas'} também tiveram evento em ${rotuloMes(mesAnterior(m.mes))}</span></div>`
-    ).join('') || '<div class="apagado">A reincidência mês a mês precisa de pelo menos dois meses seguidos no filtro.</div>';
+    // resumo dos 3 meses mais recentes; os anteriores ficam recolhidos
+    const resumoMes = m => `<div class="reinc-mes"><b>${formatarPercentual(m.pct ?? 0)}</b> <span>${rotuloMes(m.mes)}: ${formatarNumero(m.reincidentes)} de ${formatarNumero(m.ativos)} ${porMotorista ? 'motoristas' : 'placas'} também tiveram evento em ${rotuloMes(mesAnterior(m.mes))}</span></div>`;
+    const comparaveis = porMes.filter(m => m.reincidentes !== null).reverse();
+    const anteriores = comparaveis.slice(3);
+    $('#reincResumo').innerHTML = comparaveis.length
+      ? comparaveis.slice(0, 3).map(resumoMes).join('')
+        + (anteriores.length ? `<details class="reinc-anteriores"><summary>Meses anteriores (${anteriores.length})</summary>${anteriores.map(resumoMes).join('')}</details>` : '')
+      : '<div class="apagado">A reincidência mês a mês precisa de pelo menos dois meses seguidos no filtro.</div>';
 
     const maximo = Math.max(1, maximoMensal);
     const isolado = this.estado.unicoSelecionado(listaFiltro);
-    this.tabelas.reinc.renderizar([
+    this.#ajustarMeses('reinc', meses, visiveis => this.tabelas.reinc.renderizar([
       { k: nome, h: porMotorista ? 'Motorista' : 'Placa', cls: 'nowrap', f: r => `<b>${escaparHtml(r[nome])}</b>`, dica: r => this.#dica(r, r[nome], [escaparHtml(r.cliente)]) },
       { k: 'cliente', h: 'Cliente', f: cliente(22) },
-      ...meses.map(m => ({ k: 'mes-' + m, h: rotuloMes(m), num: true, v: r => r.m[m] || 0, f: r => celulaCalor(r.m[m], maximo) })),
-      { k: 'sequencia', h: 'Meses seguidos', num: true },
+      ...visiveis.map(m => ({ k: 'mes-' + m, h: rotuloMes(m), num: true, v: r => r.m[m] || 0, f: r => celulaCalor(r.m[m], maximo) })),
+      { k: 'sequencia', h: 'Meses<br>seguidos', num: true },
       { k: 'total', h: 'Total', num: true, f: negrito('total') },
       { k: 'variacao', h: 'Var. mês', num: true, v: ordenarVariacao, f: r => celulaVariacao(r.variacao) },
       this.#colunaExcecoes(2, r => this.#dica(r, r[nome], [escaparHtml(r.cliente)]))
@@ -150,7 +175,7 @@ export class Tabelas {
       limite: this.estado.limites.reinc,
       aoClicar: r => this.#isolar(listaFiltro, r[nome]),
       selecionada: r => r[nome] === isolado
-    });
+    }));
     this.#botaoMais('reinc', lista.length);
   }
 

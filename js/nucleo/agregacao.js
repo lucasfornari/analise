@@ -79,6 +79,16 @@ export function completarPonto(ponto) {
   return Object.assign(ponto, { grupos, porExcecao, cli, referencias, local: maisFrequente(referencias)[0] });
 }
 
+// Exceções somadas de um grupo de pontos do mapa (tooltip ao passar o mouse); guardadas no próprio grupo.
+export function excecoesDoGrupo(grupo) {
+  if (!grupo.porExcecao) {
+    const soma = new Map();
+    for (const p of grupo.pontos) for (const [nome, n] of completarPonto(p).porExcecao) soma.set(nome, (soma.get(nome) || 0) + n);
+    grupo.porExcecao = soma;
+  }
+  return grupo.porExcecao;
+}
+
 export function agregar(registros) {
   const n = registros.length;
   const porClasse = porClasseZerada();

@@ -46,6 +46,19 @@ export class Dica {
     Object.assign(this.caixa.style, { left: x + 'px', top: y + 'px' });
   }
 
+  // Balão junto ao cursor, para alvos que não são elementos (pontos do mapa, desenhados em canvas).
+  mostrarNoCursor(html, x, y, camada = document.body) {
+    clearTimeout(this.espera);
+    this.alvo = null;
+    if (this.caixa.parentElement !== camada) camada.append(this.caixa);
+    this.caixa.innerHTML = html;
+    this.caixa.hidden = false;
+    const { width, height } = this.caixa.getBoundingClientRect();
+    const esquerda = x + 16 + width <= innerWidth - MARGEM ? x + 16 : x - 16 - width;
+    const topo = Math.min(Math.max(MARGEM, y + 16), innerHeight - height - MARGEM);
+    Object.assign(this.caixa.style, { left: Math.max(MARGEM, esquerda) + 'px', top: topo + 'px' });
+  }
+
   esconder() {
     clearTimeout(this.espera);
     this.alvo = null;

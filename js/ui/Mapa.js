@@ -4,9 +4,9 @@
 import { $, $$ } from '../util/dom.js';
 import { formatarNumero, escaparHtml, abreviarCliente, formatarDataHora, formatarCoordenada } from '../util/formatacao.js';
 import { CLASSE_DO_GRUPO } from '../nucleo/catalogoExcecoes.js';
-import { listaExcecoes } from './etiquetasExcecoes.js';
+import { listaExcecoes, dicaExcecoes } from './etiquetasExcecoes.js';
 import { detalharLocal } from '../nucleo/detalheLocal.js';
-import { chaveCoordenada, completarPonto } from '../nucleo/agregacao.js';
+import { chaveCoordenada, completarPonto, excecoesDoGrupo } from '../nucleo/agregacao.js';
 import { agruparPontos, tetoDoCalor } from '../nucleo/agrupamentoMapa.js';
 import { iconeGoogleMaps } from '../util/links.js';
 import { CORES, COR_CLASSE } from '../config/tema.js';
@@ -16,6 +16,7 @@ const FALHAS_PARA_TROCAR = 4;   // tiles com erro, sem nenhum sucesso, antes de 
 const MAX_MARCADORES = 2000;    // marcadores na área visível; acima disso, só os maiores
 const TOP_NO_POPUP = 3;          // placas e motoristas mais frequentes no resumo do popup
 const TOP_EXCECOES_NO_POPUP = 5; // exceções no resumo; a lista completa fica na aba Exceções dos detalhes
+const EXCECOES_NA_DICA = 8;      // tooltip ao passar o mouse num ponto ou grupo
 const RAIO_CLIQUE = 30;         // px: distância máxima do clique até o ponto ou grupo
 const porFrequencia = mapa => [...mapa.entries()].sort((a, b) => b[1] - a[1]);
 
@@ -45,6 +46,9 @@ export class Mapa {
     this.popup = L.popup({ maxWidth: 380, minWidth: 320, autoPanPadding: [24, 24], className: 'popup-local' });
     this.mapa.on('click', e => this.#abrirMaisProximo(e.containerPoint));
     this.mapa.on('moveend', () => this.#desenharMarcadores());
+    // tooltip do ponto ou grupo sob o cursor, no agrupamento do zoom atual (em qualquer modo: calor, locais ou ambos)
+    this.mapa.on('mousemove', e => this.#aoPassarMouse(e));
+    this.mapa.on('mouseout movestart zoomstart popupopen', () => this.#esconderDica());
     this.#trocarFundo(this.fundo, 0);
   }
 
@@ -129,6 +133,8 @@ export class Mapa {
     if (!this.pontos) return;
     const grupos = this.#grupos();
     const agrupado = grupos.some(g => g.pontos.length > 1);
+    const area = this.mapa.getBounds().pad(0.25);
+    this.gruposNaArea = grupos.filter(g => area.contains([g.lat, g.lon]));   // clique e tooltip procuram só aqui
     const notas = [this.notaFixa];
     if (agrupado) notas.push('pontos próximos agrupados: clique no grupo ou aproxime para ver cada coordenada');
 
@@ -136,8 +142,7 @@ export class Mapa {
     if (this.modo === 'heat') {
       this.mapa.removeLayer(this.marcadores);
     } else {
-      const area = this.mapa.getBounds().pad(0.25);
-      const naArea = grupos.filter(g => area.contains([g.lat, g.lon]));
+      const naArea = this.gruposNaArea;
       const visiveis = naArea.length > MAX_MARCADORES ? [...naArea].sort((a, b) => b.total - a.total).slice(0, MAX_MARCADORES) : naArea;
       if (visiveis.length < naArea.length) notas.push(`marcadores dos ${formatarNumero(visiveis.length)} pontos com mais eventos nesta área`);
       let maximo = 1;
@@ -168,18 +173,56 @@ export class Mapa {
     const tamanho = Math.round(26 + Math.sqrt(grupo.total / maximo) * 22);
     return L.marker([grupo.lat, grupo.lon], {
       icon: L.divIcon({ className: 'grupo-mapa', html: `<span>${formatarNumero(grupo.total)}</span>`, iconSize: [tamanho, tamanho] }),
-      title: `${formatarNumero(grupo.pontos.length)} pontos · ${formatarNumero(grupo.total)} eventos`, keyboard: false
+      keyboard: false, bubblingMouseEvents: true   // o mousemove chega ao mapa, que mostra o tooltip do grupo
     });
   }
 
-  // Clique em qualquer lugar (inclusive no mapa de calor): age sobre o grupo ou ponto mais próximo dentro do raio.
-  #abrirMaisProximo(clique) {
+  // Grupo ou ponto mais próximo do cursor, dentro do raio (vale para o calor, que não tem marcadores).
+  #maisProximo(posicao) {
     let maisProximo = null, menorDistancia = RAIO_CLIQUE;
-    for (const grupo of this.#grupos()) {
-      const d = clique.distanceTo(this.mapa.latLngToContainerPoint([grupo.lat, grupo.lon]));
+    for (const grupo of this.gruposNaArea || []) {
+      const d = posicao.distanceTo(this.mapa.latLngToContainerPoint([grupo.lat, grupo.lon]));
       if (d < menorDistancia) { menorDistancia = d; maisProximo = grupo; }
     }
-    if (maisProximo) this.#abrirGrupo(maisProximo);
+    return maisProximo;
+  }
+
+  #abrirMaisProximo(clique) {
+    const grupo = this.#maisProximo(clique);
+    if (grupo) this.#abrirGrupo(grupo);
+  }
+
+  // Um cálculo por quadro de animação, por mais rápido que o mouse se mova.
+  #aoPassarMouse(e) {
+    cancelAnimationFrame(this.quadro);
+    if (e.originalEvent.target.closest?.('.leaflet-popup, .leaflet-control')) return this.#esconderDica();
+    this.quadro = requestAnimationFrame(() => {
+      const grupo = this.#maisProximo(e.containerPoint);
+      this.mapa.getContainer().style.cursor = grupo ? 'pointer' : '';
+      if (!grupo) return this.#esconderDica();
+      this.painel.dica.mostrarNoCursor(grupo.dica ??= this.#conteudoDica(grupo), e.originalEvent.clientX, e.originalEvent.clientY);
+      this.dicaAberta = true;
+    });
+  }
+
+  #esconderDica() {
+    cancelAnimationFrame(this.quadro);
+    if (!this.dicaAberta) return;
+    this.dicaAberta = false;
+    this.painel.dica.esconder();
+  }
+
+  // Coordenada: referência, posição e exceções. Grupo: quantos pontos, o maior e as exceções somadas.
+  #conteudoDica(grupo) {
+    const classeDe = this.estado.agregado.classeDaExcecao;
+    if (grupo.pontos.length === 1) {
+      const ponto = completarPonto(grupo.pontos[0]);
+      return dicaExcecoes(ponto.local, ponto.porExcecao, classeDe,
+        [formatarCoordenada(ponto), 'Clique para ver placas, motoristas e eventos'], EXCECOES_NA_DICA);
+    }
+    const maior = completarPonto(grupo.pontos[0]);   // o grupo nasce no ponto com mais eventos
+    return dicaExcecoes(`${formatarNumero(grupo.pontos.length)} pontos próximos`, excecoesDoGrupo(grupo), classeDe,
+      [`Maior: ${escaparHtml(maior.local)} (${formatarNumero(maior.total)})`, 'Clique para aproximar e ver cada coordenada'], EXCECOES_NA_DICA);
   }
 
   // Coordenada sozinha abre o resumo; grupo aproxima o mapa até as suas coordenadas.
