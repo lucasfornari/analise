@@ -3,7 +3,8 @@
 // Clicar numa coordenada abre o resumo; "Ver detalhes" abre placas, motoristas e eventos (DetalheLocal).
 import { $, $$ } from '../util/dom.js';
 import { formatarNumero, escaparHtml, abreviarCliente, formatarDataHora, formatarCoordenada } from '../util/formatacao.js';
-import { CLASSE_DO_GRUPO, ROTULO_GRUPO } from '../nucleo/catalogoExcecoes.js';
+import { CLASSE_DO_GRUPO } from '../nucleo/catalogoExcecoes.js';
+import { listaExcecoes } from './etiquetasExcecoes.js';
 import { detalharLocal } from '../nucleo/detalheLocal.js';
 import { chaveCoordenada, completarPonto } from '../nucleo/agregacao.js';
 import { agruparPontos, tetoDoCalor } from '../nucleo/agrupamentoMapa.js';
@@ -14,6 +15,7 @@ import { CAMADAS_MAPA, CENTRO_BRASIL, GRADIENTE_CALOR, AGRUPAMENTO } from '../co
 const FALHAS_PARA_TROCAR = 4;   // tiles com erro, sem nenhum sucesso, antes de tentar o provedor reserva
 const MAX_MARCADORES = 2000;    // marcadores na área visível; acima disso, só os maiores
 const TOP_NO_POPUP = 3;          // placas e motoristas mais frequentes no resumo do popup
+const TOP_EXCECOES_NO_POPUP = 5; // exceções no resumo; a lista completa fica na aba Exceções dos detalhes
 const RAIO_CLIQUE = 30;         // px: distância máxima do clique até o ponto ou grupo
 const porFrequencia = mapa => [...mapa.entries()].sort((a, b) => b[1] - a[1]);
 
@@ -88,7 +90,8 @@ export class Mapa {
     if (this.modo !== 'points' && pontos.length) this.#desenharCalor(pontos);
 
     const semCoordenada = this.estado.filtrados.length - this.estado.agregado.geo;
-    this.notaFixa = semCoordenada ? `${formatarNumero(semCoordenada)} eventos sem coordenada ficaram fora do mapa` : '';
+    this.notaFixa = !semCoordenada ? '' : semCoordenada === 1 ? '1 evento sem coordenada ficou fora do mapa'
+      : `${formatarNumero(semCoordenada)} eventos sem coordenada ficaram fora do mapa`;
     $('#mapSub').textContent = `${formatarNumero(this.estado.agregado.geo)} eventos georreferenciados em ${formatarNumero(pontos.length)} pontos`;
     if (ajustar && pontos.length) {
       this.mapa.fitBounds(L.latLngBounds(pontos.map(p => [p.lat, p.lon])).pad(0.08), { maxZoom: 12 });
@@ -194,11 +197,9 @@ export class Mapa {
     this.popup.getElement().querySelector('[data-detalhe]').onclick = () => this.painel.detalhe.abrir(ponto);
   }
 
-  // Resumo da coordenada: totais, grupos, principais placas e motoristas. O detalhamento completo fica na janela.
+  // Resumo da coordenada: totais, principais exceções (nome e quantidade), principais placas e motoristas. O detalhamento completo fica na janela.
   #conteudoPopup(local) {
     const { resumo, placas, motoristas } = detalharLocal(local.eventos);
-    const grupos = porFrequencia(local.grupos).slice(0, 4).map(([g, n]) =>
-      `<span class="tag ${(CLASSE_DO_GRUPO[g] || '').toLowerCase()}">${ROTULO_GRUPO[g]} ${formatarNumero(n)}</span>`).join('');
     const clientes = porFrequencia(local.cli).slice(0, 3).map(([c, n]) => `${escaparHtml(abreviarCliente(c))} (${formatarNumero(n)})`).join(', ');
     const topo = (itens, campo) => itens.slice(0, TOP_NO_POPUP).map(x =>
       `<li><b>${escaparHtml(x[campo])}</b><span>${formatarNumero(x.total)}</span></li>`).join('');
@@ -206,7 +207,7 @@ export class Mapa {
         <span class="popup-coordenada">${formatarCoordenada(local)}${local.referencias.size > 1 ? ` · ${formatarNumero(local.referencias.size)} referências nesta coordenada` : ''}</span>
         <span>${formatarNumero(resumo.eventos)} eventos · ${formatarNumero(resumo.placas)} placas · ${formatarNumero(resumo.motoristas)} motoristas · ${formatarNumero(resumo.viagens)} SMs</span>
         ${resumo.ultimo ? `<span>Último evento: ${formatarDataHora(resumo.ultimo)}</span>` : ''}</div>
-      <div class="popup-grupos">${grupos}</div>
+      <div class="popup-excecoes">${listaExcecoes(local.porExcecao, this.estado.agregado.classeDaExcecao, TOP_EXCECOES_NO_POPUP)}</div>
       <div class="popup-clientes">${clientes}</div>
       <div class="popup-topo"><div><h5>Placas</h5><ul>${topo(placas, 'placa')}</ul></div><div><h5>Motoristas</h5><ul>${topo(motoristas, 'motorista')}</ul></div></div>
       <button class="btn primary small popup-detalhe" data-detalhe>Ver detalhes: placas, motoristas e eventos</button>`;

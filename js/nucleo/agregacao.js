@@ -74,9 +74,9 @@ export function reincidencia(entidades, meses) {
 // local: a referência mais frequente na coordenada, usada como título.
 export function completarPonto(ponto) {
   if (ponto.grupos) return ponto;
-  const grupos = new Map(), cli = new Map(), referencias = new Map();
-  for (const r of ponto.eventos) { incrementar(grupos, r.grupo); incrementar(cli, r.cliente); incrementar(referencias, r.referencia || '(sem referência)'); }
-  return Object.assign(ponto, { grupos, cli, referencias, local: maisFrequente(referencias)[0] });
+  const grupos = new Map(), porExcecao = new Map(), cli = new Map(), referencias = new Map();
+  for (const r of ponto.eventos) { incrementar(grupos, r.grupo); incrementar(porExcecao, r.excecao); incrementar(cli, r.cliente); incrementar(referencias, r.referencia || '(sem referência)'); }
+  return Object.assign(ponto, { grupos, porExcecao, cli, referencias, local: maisFrequente(referencias)[0] });
 }
 
 export function agregar(registros) {
@@ -101,13 +101,13 @@ export function agregar(registros) {
     }
 
     let c = clientes.get(r.cliente);
-    if (!c) clientes.set(r.cliente, c = { cliente: r.cliente, total: 0, ...porClasseZerada(), m: {} });
-    c.total++; c[r.classe]++;
+    if (!c) clientes.set(r.cliente, c = { cliente: r.cliente, total: 0, ...porClasseZerada(), m: {}, porExcecao: new Map() });
+    c.total++; c[r.classe]++; incrementar(c.porExcecao, r.excecao);
     if (r.mes) c.m[r.mes] = (c.m[r.mes] || 0) + 1;
 
     let l = locais.get(r.local);
-    if (!l) locais.set(r.local, l = { local: r.local, total: 0, grupos: new Map(), cli: new Map(), placas: new Set(), eventos: [] });
-    l.total++; incrementar(l.grupos, r.grupo); incrementar(l.cli, r.cliente); l.eventos.push(r);
+    if (!l) locais.set(r.local, l = { local: r.local, total: 0, grupos: new Map(), porExcecao: new Map(), cli: new Map(), placas: new Set(), eventos: [] });
+    l.total++; incrementar(l.grupos, r.grupo); incrementar(l.porExcecao, r.excecao); incrementar(l.cli, r.cliente); l.eventos.push(r);
     if (r.placa) l.placas.add(r.placa);
 
     if (r.lat != null) {
@@ -121,22 +121,22 @@ export function agregar(registros) {
     // placas: equipamento e contexto; motoristas: exceções de motorista
     if (r.classe !== CLASSE.MOTORISTA && r.placa) {
       let p = placas.get(r.placa);
-      if (!p) placas.set(r.placa, p = { placa: r.placa, clis: new Map(), total: 0, grupos: new Map(), viagens: new Set(), tec: new Map(), m: {} });
-      p.total++; incrementar(p.grupos, r.grupo); incrementar(p.clis, r.cliente); incrementar(p.tec, r.tecnologia);
+      if (!p) placas.set(r.placa, p = { placa: r.placa, clis: new Map(), total: 0, grupos: new Map(), porExcecao: new Map(), viagens: new Set(), tec: new Map(), m: {} });
+      p.total++; incrementar(p.grupos, r.grupo); incrementar(p.porExcecao, r.excecao); incrementar(p.clis, r.cliente); incrementar(p.tec, r.tecnologia);
       if (r.viagem) p.viagens.add(r.viagem);
       if (r.mes) p.m[r.mes] = (p.m[r.mes] || 0) + 1;
     }
     if (r.classe === CLASSE.MOTORISTA && r.motorista) {
       let mo = motoristas.get(r.motorista);
-      if (!mo) motoristas.set(r.motorista, mo = { motorista: r.motorista, clis: new Map(), total: 0, grupos: new Map(), locais: new Map(), placas: new Set(), m: {} });
-      mo.total++; incrementar(mo.grupos, r.grupo); incrementar(mo.clis, r.cliente); incrementar(mo.locais, r.local);
+      if (!mo) motoristas.set(r.motorista, mo = { motorista: r.motorista, clis: new Map(), total: 0, grupos: new Map(), porExcecao: new Map(), locais: new Map(), placas: new Set(), m: {} });
+      mo.total++; incrementar(mo.grupos, r.grupo); incrementar(mo.porExcecao, r.excecao); incrementar(mo.clis, r.cliente); incrementar(mo.locais, r.local);
       if (r.placa) mo.placas.add(r.placa);
       if (r.mes) mo.m[r.mes] = (mo.m[r.mes] || 0) + 1;
     }
 
     let pf = perfis.get(r.perfil);
-    if (!pf) perfis.set(r.perfil, pf = { perfil: r.perfil, total: 0, ...porClasseZerada(), clis: new Map() });
-    pf.total++; pf[r.classe]++; incrementar(pf.clis, r.cliente);
+    if (!pf) perfis.set(r.perfil, pf = { perfil: r.perfil, total: 0, ...porClasseZerada(), clis: new Map(), porExcecao: new Map() });
+    pf.total++; pf[r.classe]++; incrementar(pf.porExcecao, r.excecao); incrementar(pf.clis, r.cliente);
   }
 
   const meses = [...porMes.keys()].sort();
@@ -170,6 +170,7 @@ export function agregar(registros) {
     nClientes: clientes.size,
     variacao: variacaoMensal(totalDoMes, meses),
     grupos, excecoes: [...excecoes.values()].sort(porTotalDepois('excecao')),
+    classeDaExcecao: new Map([...excecoes.values()].map(e => [e.excecao, e.classe])),
     meses, mesClasse,
     clientes: listaClientes,
     // locais: agrupados pela referência em texto (tabela); pontos: pela coordenada (mapa)

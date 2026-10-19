@@ -37,7 +37,8 @@ const opcoesHorizontais = (tamanhoFonte = 13) => opcoesBase({
 });
 
 const TOP_EXCECOES = 12;
-const encurtar = (texto, max = 42) => texto.length > max ? texto.slice(0, max - 1) + '…' : texto;
+const encurtar = (texto, max = 34) =>   // rótulo maior que isso é cortado pelo eixo do Chart.js
+  texto.length > max ? texto.slice(0, max - 1) + '…' : texto;
 
 export class Graficos {
   graficos = {};

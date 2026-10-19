@@ -1,10 +1,11 @@
 // Tabelas do painel: ranking de clientes, clientes mês a mês, reincidentes, locais, placas, motoristas e perfis.
 import { $, $$ } from '../util/dom.js';
 import { formatarNumero, formatarPercentual, formatarVariacao, escaparHtml, abreviarCliente, rotuloMes } from '../util/formatacao.js';
-import { CLASSES, ROTULO_GRUPO, CLASSE_DO_GRUPO } from '../nucleo/catalogoExcecoes.js';
+import { CLASSES } from '../nucleo/catalogoExcecoes.js';
 import { mesAnterior } from '../nucleo/agregacao.js';
 import { LINHAS_POR_PAGINA } from '../estado/Estado.js';
 import { Tabela } from './Tabela.js';
+import { etiquetasExcecoes, dicaExcecoes } from './etiquetasExcecoes.js';
 
 const INCREMENTO_PAGINA = 35;
 const SIGLA_CLASSE = { MOTORISTA: 'Mot.', VEICULO: 'Veíc.', CONTEXTO: 'CS' };
@@ -27,11 +28,6 @@ function celulaVariacao(variacao) {
 }
 const ordenarVariacao = linha => linha.variacao?.pct ?? (linha.variacao ? Infinity : -Infinity);
 
-// Etiquetas dos grupos mais frequentes, coloridas pela classe.
-function etiquetas(grupos, limite = 3) {
-  return [...grupos.entries()].sort((a, b) => b[1] - a[1]).slice(0, limite)
-    .map(([grupo, n]) => `<span class="tag ${(CLASSE_DO_GRUPO[grupo] || '').toLowerCase()}">${ROTULO_GRUPO[grupo]} ${formatarNumero(n)}</span>`).join('');
-}
 
 // Célula de mês com fundo proporcional ao valor (mapa de calor da tabela).
 const celulaCalor = (valor, maximo) => valor
@@ -59,6 +55,7 @@ export class Tabelas {
   }
 
   renderizar() {
+    this.classeDe = this.estado.agregado.classeDaExcecao;
     this.#clientes();
     this.#clientesMensal();
     this.#reincidentes();
@@ -66,6 +63,25 @@ export class Tabelas {
     this.#placas();
     this.#motoristas();
     this.#perfis();
+  }
+
+  // Coluna "Principais exceções" (nome + quantidade) e o tooltip com a lista completa da linha.
+  #colunaExcecoes(limite = 2, dica = r => this.#dica(r)) {
+    return { k: 'excecoes', h: 'Principais exceções', v: r => r.total, cls: 'col-excecoes', f: r => etiquetasExcecoes(r.porExcecao, this.classeDe, limite), dica };
+  }
+
+  #dica(linha, titulo = linha.motorista ?? linha.placa ?? linha.local ?? linha.perfil ?? linha.cliente, extra = []) {
+    return dicaExcecoes(titulo, linha.porExcecao, this.classeDe, extra);
+  }
+
+  // placas contam exceções de veículo e contexto; motoristas, só as de motorista (mesma regra do total)
+  #dicaPlaca(r) {
+    return this.#dica(r, r.placa, [`${escaparHtml(r.cliente)} · exceções de veículo e contexto suspeito`]);
+  }
+
+  #dicaMotorista(r) {
+    return this.#dica(r, r.motorista, [`${escaparHtml(r.cliente)} · exceções de motorista`,
+      `Local mais frequente: ${escaparHtml(r.topLocal)} (${formatarNumero(r.topLocalN)})`]);
   }
 
   // Clicar numa linha isola o painel no item (cliente, placa, motorista, perfil); clicar de novo desfaz.
@@ -79,7 +95,7 @@ export class Tabelas {
     const isolado = this.estado.unicoSelecionado('cli');
     this.tabelas.cli.renderizar([
       { k: 'rank', h: '#', num: true },
-      { k: 'cliente', h: 'Cliente', cls: 'nowrap', f: cliente(Infinity) },
+      { k: 'cliente', h: 'Cliente', cls: 'nowrap', f: r => escaparHtml(abreviarCliente(r.cliente)), dica: r => this.#dica(r) },
       { k: 'total', h: 'Total', num: true, f: negrito('total') },
       { k: 'pct', h: '%', num: true, f: r => formatarPercentual(r.pct) },
       { k: 'acum', h: '% acum.', num: true, f: r => formatarPercentual(r.acum) },
@@ -98,7 +114,7 @@ export class Tabelas {
     const ultimo = meses[meses.length - 1];
     const tituloVariacao = ultimo ? `${rotuloMes(ultimo)} × ${rotuloMes(mesAnterior(ultimo))}` : 'Variação';
     this.tabelas.cliMes.renderizar([
-      { k: 'cliente', h: 'Cliente', cls: 'nowrap', f: cliente(Infinity) },
+      { k: 'cliente', h: 'Cliente', cls: 'nowrap', f: r => escaparHtml(abreviarCliente(r.cliente)), dica: r => this.#dica(r) },
       ...colunasMes,
       { k: 'total', h: 'Total', num: true, f: negrito('total') },
       { k: 'variacao', h: tituloVariacao, num: true, v: ordenarVariacao, f: r => celulaVariacao(r.variacao) },
@@ -123,13 +139,13 @@ export class Tabelas {
     const maximo = Math.max(1, maximoMensal);
     const isolado = this.estado.unicoSelecionado(listaFiltro);
     this.tabelas.reinc.renderizar([
-      { k: nome, h: porMotorista ? 'Motorista' : 'Placa', cls: 'nowrap', f: r => `<b>${escaparHtml(r[nome])}</b>` },
+      { k: nome, h: porMotorista ? 'Motorista' : 'Placa', cls: 'nowrap', f: r => `<b>${escaparHtml(r[nome])}</b>`, dica: r => this.#dica(r, r[nome], [escaparHtml(r.cliente)]) },
       { k: 'cliente', h: 'Cliente', f: cliente(22) },
       ...meses.map(m => ({ k: 'mes-' + m, h: rotuloMes(m), num: true, v: r => r.m[m] || 0, f: r => celulaCalor(r.m[m], maximo) })),
       { k: 'sequencia', h: 'Meses seguidos', num: true },
       { k: 'total', h: 'Total', num: true, f: negrito('total') },
       { k: 'variacao', h: 'Var. mês', num: true, v: ordenarVariacao, f: r => celulaVariacao(r.variacao) },
-      { k: 'grupos', h: 'Principais grupos', v: r => r.total, f: r => etiquetas(r.grupos, 2) }
+      this.#colunaExcecoes(2, r => this.#dica(r, r[nome], [escaparHtml(r.cliente)]))
     ], lista, {
       limite: this.estado.limites.reinc,
       aoClicar: r => this.#isolar(listaFiltro, r[nome]),
@@ -142,11 +158,11 @@ export class Tabelas {
   #locais() {
     const locais = this.estado.agregado.locais;
     this.tabelas.loc.renderizar([
-      { k: 'local', h: 'Local' },
+      { k: 'local', h: 'Local', dica: r => this.#dica(r) },
       { k: 'total', h: 'Eventos', num: true, f: negrito('total') },
       { k: 'nPl', h: 'Placas', num: true },
       { k: 'nCli', h: 'Clientes', num: true },
-      { k: 'grupos', h: 'Grupos', v: r => r.total, f: r => etiquetas(r.grupos) }
+      this.#colunaExcecoes()
     ], locais, { limite: this.estado.limites.loc, aoClicar: r => this.painel.mapa.focar(r) });
     this.#botaoMais('loc', locais.length);
   }
@@ -155,12 +171,12 @@ export class Tabelas {
     const placas = this.estado.agregado.placas;
     const isolada = this.estado.unicoSelecionado('pla');
     this.tabelas.placa.renderizar([
-      { k: 'placa', h: 'Placa', f: r => `<b>${escaparHtml(r.placa)}</b>` },
+      { k: 'placa', h: 'Placa', f: r => `<b>${escaparHtml(r.placa)}</b>`, dica: r => this.#dicaPlaca(r) },
       { k: 'cliente', h: 'Cliente', cls: 'nowrap', f: cliente(22) },
       { k: 'total', h: 'Eventos', num: true, f: negrito('total') },
       { k: 'nViagens', h: 'SMs', num: true },
-      { k: 'tecnologia', h: 'Tecnologia' },
-      { k: 'grupos', h: 'Grupos', v: r => r.total, f: r => etiquetas(r.grupos, 2) }
+      this.#colunaExcecoes(2, r => this.#dicaPlaca(r)),
+      { k: 'tecnologia', h: 'Tecnologia' }
     ], placas, {
       limite: this.estado.limites.placa, aoClicar: r => this.#isolar('pla', r.placa), selecionada: r => r.placa === isolada
     });
@@ -171,11 +187,11 @@ export class Tabelas {
     const motoristas = this.estado.agregado.motoristas;
     const isolado = this.estado.unicoSelecionado('mot');
     this.tabelas.mot.renderizar([
-      { k: 'motorista', h: 'Motorista', cls: 'nowrap', f: r => `<span title="Local mais frequente: ${escaparHtml(r.topLocal)} (${formatarNumero(r.topLocalN)})">${escaparHtml(r.motorista)}</span>` },
+      { k: 'motorista', h: 'Motorista', cls: 'nowrap', f: r => escaparHtml(r.motorista), dica: r => this.#dicaMotorista(r) },
       { k: 'cliente', h: 'Cliente', cls: 'nowrap', f: cliente(20) },
       { k: 'total', h: 'Eventos', num: true, f: negrito('total') },
       { k: 'nPlacas', h: 'Placas', num: true },
-      { k: 'grupos', h: 'Grupos', v: r => r.total, f: r => etiquetas(r.grupos, 2) }
+      this.#colunaExcecoes(2, r => this.#dicaMotorista(r))
     ], motoristas, {
       limite: this.estado.limites.mot, aoClicar: r => this.#isolar('mot', r.motorista), selecionada: r => r.motorista === isolado
     });
@@ -186,7 +202,7 @@ export class Tabelas {
     const perfis = this.estado.agregado.perfis;
     const isolado = this.estado.unicoSelecionado('per');
     this.tabelas.per.renderizar([
-      { k: 'perfil', h: 'Perfil de segurança', cls: 'nowrap', f: r => `<span title="${escaparHtml(r.perfil)}" class="texto-perfil">${escaparHtml(r.perfil)}</span>` },
+      { k: 'perfil', h: 'Perfil de segurança', cls: 'nowrap', f: r => `<span class="texto-perfil">${escaparHtml(r.perfil)}</span>`, dica: r => this.#dica(r) },
       { k: 'cliente', h: 'Cliente', f: cliente(20, r => r.nCli > 1 ? ` +${r.nCli - 1}` : '') },
       { k: 'total', h: 'Total', num: true, f: negrito('total') },
       { k: 'bar', h: '', v: r => r.total, cls: 'barcell', f: barra(perfis[0]?.total || 1) },

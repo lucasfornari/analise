@@ -138,7 +138,7 @@
       <button class="btn small more" data-more="reinc">Mostrar mais</button>
     </div>
 
-    <div class="grid g-2b">
+    <div class="grid g-2b g-tabelas">
       <div class="card">
         <div class="card-head">
           <div><h2>Locais ofensores</h2><div class="sub">Candidatos a inibição, cadastro de destinatário ou ajuste de raio. Clique para ver no mapa</div></div>
@@ -155,7 +155,7 @@
       </div>
     </div>
 
-    <div class="grid g-2b">
+    <div class="grid g-2b g-tabelas">
       <div class="card">
         <div class="card-head">
           <div><h2>Motoristas</h2><div class="sub">Exceções da classe motorista. Clique para filtrar pelo motorista</div></div>
@@ -182,6 +182,9 @@
     </div>
   </section>
 
+  <!-- tooltip global (js/ui/Dica.js): exceções por nome e quantidade ao passar o mouse -->
+  <div id="dica" class="dica" role="tooltip" hidden></div>
+
   <!-- detalhes de um local do mapa (js/ui/DetalheLocal.js) -->
   <dialog class="modal" id="detalheLocal" aria-labelledby="detalheTitulo">
     <div class="modal-cabecalho">
@@ -193,7 +196,7 @@
     </div>
     <div class="modal-indicadores" id="detalheIndicadores"></div>
     <div class="modal-ferramentas">
-      <div class="seg" id="detalheAbas"><button data-v="placas" class="on">Placas</button><button data-v="motoristas">Motoristas</button><button data-v="eventos">Eventos</button></div>
+      <div class="seg" id="detalheAbas"><button data-v="placas" class="on">Placas</button><button data-v="motoristas">Motoristas</button><button data-v="excecoes">Exceções</button><button data-v="eventos">Eventos</button></div>
       <input type="search" id="detalheBusca" placeholder="Buscar placa, carreta, motorista, SM, exceção ou cliente" aria-label="Buscar nos detalhes do local">
     </div>
     <div class="tbl-wrap modal-tabela"><table id="tblDetalhe"></table></div>

@@ -1,4 +1,4 @@
-// Detalhamento de um local do mapa: eventos agrupados por placa e por motorista, e resumo do local.
+// Detalhamento de um local do mapa: eventos agrupados por placa, por motorista e por exceção, e resumo do local.
 import { normalizarChave } from './texto.js';
 import { EM_BRANCO } from './filtro.js';
 
@@ -13,6 +13,7 @@ function acumular(grupos, chave, novo, r) {
   if (!g) grupos.set(chave, g = novo());
   g.total++;
   incrementar(g.grupos, r.grupo);
+  incrementar(g.porExcecao, r.excecao);
   incrementar(g.clientes, r.cliente);
   if (r.viagem) g.viagens.add(r.viagem);
   if (r.data && (!g.ultimo || r.data > g.ultimo)) g.ultimo = r.data;
@@ -21,17 +22,19 @@ function acumular(grupos, chave, novo, r) {
 
 // eventos: registros do local já filtrados pelo painel.
 export function detalharLocal(eventos) {
-  const placas = new Map(), motoristas = new Map();
+  const placas = new Map(), motoristas = new Map(), excecoes = new Map();
   const viagens = new Set(), clientes = new Set();
   let primeiro = null, ultimo = null;
 
   for (const r of eventos) {
     const placa = r.placa || EM_BRANCO, motorista = r.motorista || EM_BRANCO;
-    const p = acumular(placas, placa, () => ({ placa, total: 0, grupos: new Map(), clientes: new Map(), viagens: new Set(), carretas: new Set(), motoristas: new Map(), ultimo: null }), r);
+    const p = acumular(placas, placa, () => ({ placa, total: 0, grupos: new Map(), porExcecao: new Map(), clientes: new Map(), viagens: new Set(), carretas: new Set(), motoristas: new Map(), ultimo: null }), r);
     if (r.carreta) p.carretas.add(r.carreta);
     incrementar(p.motoristas, motorista);
-    const m = acumular(motoristas, motorista, () => ({ motorista, total: 0, grupos: new Map(), clientes: new Map(), viagens: new Set(), placas: new Map(), ultimo: null }), r);
+    const m = acumular(motoristas, motorista, () => ({ motorista, total: 0, grupos: new Map(), porExcecao: new Map(), clientes: new Map(), viagens: new Set(), placas: new Map(), ultimo: null }), r);
     incrementar(m.placas, placa);
+    const e = acumular(excecoes, r.excecao, () => ({ excecao: r.excecao, classe: r.classe, total: 0, grupos: new Map(), porExcecao: new Map(), clientes: new Map(), viagens: new Set(), placas: new Set(), motoristas: new Set(), ultimo: null }), r);
+    e.placas.add(placa); e.motoristas.add(motorista);
 
     if (r.viagem) viagens.add(r.viagem);
     clientes.add(r.cliente);
@@ -50,13 +53,17 @@ export function detalharLocal(eventos) {
     cliente: principal(m.clientes), nViagens: m.viagens.size,
     busca: normalizarChave([m.motorista, ...m.placas.keys(), ...m.clientes.keys()].join(' '))
   })).sort(porTotal('motorista'));
+  const listaExcecoes = [...excecoes.values()].map(e => Object.assign(e, {
+    nPlacas: e.placas.size, nMotoristas: e.motoristas.size, nViagens: e.viagens.size,
+    busca: normalizarChave([e.excecao, ...e.placas, ...e.motoristas, ...e.clientes.keys()].join(' '))
+  })).sort(porTotal('excecao'));
   const listaEventos = [...eventos].sort(maisRecentePrimeiro).map(r => ({
     registro: r, busca: normalizarChave([r.placa, r.carreta, r.motorista, r.viagem, r.excecao, r.cliente].join(' '))
   }));
 
   return {
     resumo: { eventos: eventos.length, placas: placas.size, motoristas: motoristas.size, viagens: viagens.size, clientes: clientes.size, primeiro, ultimo },
-    placas: listaPlacas, motoristas: listaMotoristas, eventos: listaEventos
+    placas: listaPlacas, motoristas: listaMotoristas, excecoes: listaExcecoes, eventos: listaEventos
   };
 }
 
