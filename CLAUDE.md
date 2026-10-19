@@ -44,6 +44,12 @@ Semântico e automático (`scripts/versao.js`, padrão Conventional Commits), ca
 - `feat:` → menor (v0.4.2 → v0.5.0)
 - qualquer outro (`fix:`, `refactor:`, `test:`, sem prefixo…) → correção (v0.4.2 → v0.4.3)
 
+Quando usar cada um (combinado com o dono do projeto):
+- `feat:` só para funcionalidade nova de verdade: nova tela, aba, filtro, gráfico, tipo de análise ou de arquivo aceito.
+- `fix:` para todo o resto que o usuário percebe: correções, ajustes de UX/layout, textos e melhorias pequenas em algo que já existe (ex.: tooltip a mais, coluna reordenada, rótulo que não corta), mesmo que acrescentem algo.
+- `refactor:`, `test:`, `ci:`, `docs:` para mudanças sem efeito visível; também viram correção.
+- Um PR que mistura tipos usa o mais forte no título; na dúvida entre `feat:` e `fix:`, use `fix:`. Não divida um mesmo trabalho em vários PRs só por causa da versão.
+
 Use esses prefixos nos títulos de PR e commits. Não edite a versão à mão: no repositório `js/config/versao.js` fica vazio e o rodapé mostra "versão local (desenvolvimento)".
 
 ## Arquitetura
