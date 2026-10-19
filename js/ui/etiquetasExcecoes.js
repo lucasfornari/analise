@@ -36,12 +36,12 @@ export function listaExcecoes(porExcecao, classeDe, limite = LINHAS_NA_DICA) {
 
 // Conteúdo do tooltip: título, total de eventos e de tipos de exceção, contexto e a lista.
 // extra: linhas de contexto (já escapadas), como cliente ou local mais frequente.
-export function dicaExcecoes(titulo, porExcecao, classeDe, extra = []) {
+export function dicaExcecoes(titulo, porExcecao, classeDe, extra = [], limite = LINHAS_NA_DICA) {
   let total = 0;
   for (const n of porExcecao.values()) total += n;
   const tipos = porExcecao.size;
   return `<div class="dica-titulo"><b>${escaparHtml(titulo)}</b>`
     + `<span>${formatarNumero(total)} ${total === 1 ? 'evento' : 'eventos'} · ${formatarNumero(tipos)} ${tipos === 1 ? 'exceção' : 'exceções'}</span>`
     + extra.map(t => `<span>${t}</span>`).join('') + '</div>'
-    + listaExcecoes(porExcecao, classeDe);
+    + listaExcecoes(porExcecao, classeDe, limite);
 }

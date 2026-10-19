@@ -182,6 +182,12 @@ test.describe('com a planilha carregada', () => {
     const ponta = await popup.locator('.leaflet-popup-tip').boundingBox();
     await popup.locator('.leaflet-popup-close-button').click();
     await expect(popup).toBeHidden();
+    // passar o mouse no ponto (sobre o calor) mostra as exceções da coordenada com o percentual
+    const dica = page.locator('#dica');
+    await page.mouse.move(ponta.x + ponta.width / 2, ponta.y + ponta.height + 12);
+    await expect(dica.locator('.dica-titulo')).toContainText('RECIFE - PE');
+    await expect(dica.locator('.dica-titulo')).toContainText('10 eventos · 8 exceções');
+    await expect(dica.locator('li').first()).toHaveText('Velocidade excedida faixa 3' + '2' + '20,0%');
     await page.mouse.click(ponta.x + ponta.width / 2, ponta.y + ponta.height + 12);
     await expect(popup).toContainText('RECIFE - PE');
 
@@ -211,7 +217,11 @@ test.describe('com a planilha carregada', () => {
     for (let i = 0; i < 6; i++) { await page.locator('.leaflet-control-zoom-out').click(); await semAnimacao(); }
     const cascavel = grupos.filter({ hasText: /^8$/ });                              // 7 + 1 eventos, num grupo só
     await expect(cascavel).toHaveCount(1);
-    await expect(cascavel).toHaveAttribute('title', '2 pontos · 8 eventos');
+    await cascavel.hover();                                                            // tooltip do grupo: exceções somadas
+    const dica = page.locator('#dica');
+    await expect(dica.locator('.dica-titulo')).toContainText('2 pontos próximos');
+    await expect(dica.locator('.dica-titulo')).toContainText('8 eventos · 2 exceções');
+    await expect(dica.locator('li').first()).toHaveText('Velocidade excedida faixa 1' + '7' + '87,5%');
     await expect(nota).toContainText('pontos próximos agrupados');
 
     await cascavel.click();                                                           // aproxima até separar

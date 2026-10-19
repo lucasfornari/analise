@@ -4,7 +4,9 @@ import { formatarNumero, rotuloMes, ultimoDiaDoMes, capitalizar } from '../util/
 import { CLASSES, ROTULO_CLASSE, ROTULO_GRUPO, CLASSE_DO_GRUPO } from '../nucleo/catalogoExcecoes.js';
 import { CORES, COR_CLASSE, FONTE } from '../config/tema.js';
 
-// Escreve o valor ao lado (barra horizontal) ou acima (vertical) de cada barra.
+// Escreve o valor ao lado (barra horizontal) ou acima (vertical) de cada barra. Na vertical, se algum valor
+// não couber na largura da barra (muitos meses), nenhum é escrito: o gráfico fica uniforme e os valores
+// continuam no tooltip.
 const rotulosDeValor = eixo => ({
   id: 'rotulosDeValor',
   afterDatasetsDraw(grafico) {
@@ -12,16 +14,17 @@ const rotulosDeValor = eixo => ({
     ctx.save();
     ctx.font = '600 11px Barlow, Arial';
     ctx.fillStyle = CORES.ink;
-    grafico.data.datasets.forEach((serie, i) => {
+    const barras = grafico.data.datasets.flatMap((serie, i) => {
       const meta = grafico.getDatasetMeta(i);
-      if (meta.hidden) return;
-      meta.data.forEach((barra, j) => {
-        const valor = serie.data[j];
-        if (!valor) return;
+      return meta.hidden ? [] : meta.data.map((barra, j) => [barra, serie.data[j]]).filter(([, valor]) => valor);
+    });
+    const cabem = eixo === 'x' || barras.every(([barra, valor]) => ctx.measureText(formatarNumero(valor)).width <= barra.width + 6);
+    if (cabem) {
+      for (const [barra, valor] of barras) {
         if (eixo === 'x') { ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(formatarNumero(valor), barra.x + 5, barra.y); }
         else { ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(formatarNumero(valor), barra.x, barra.y - 3); }
-      });
-    });
+      }
+    }
     ctx.restore();
   }
 });
@@ -102,7 +105,11 @@ export class Graficos {
       : [{ label: 'Total', data: linhas.map(l => l.total), backgroundColor: CORES.navy, borderRadius: 3 }];
     this.#desenhar('chMes', {
       type: 'bar',
-      data: { labels: linhas.map(l => rotuloMes(l.mes) + (parcial && l.mes === ultimoMes ? '*' : '')), datasets: series },
+      // muitos meses: "set" e "25" em duas linhas, para os rótulos caberem sem girar
+      data: { labels: linhas.map(l => {
+        const rotulo = rotuloMes(l.mes) + (parcial && l.mes === ultimoMes ? '*' : '');
+        return linhas.length > 8 ? rotulo.split('/') : rotulo;
+      }), datasets: series },
       options: opcoesBase({
         plugins: {
           legend: { display: porClasse, position: 'bottom', labels: { boxWidth: 12 } },

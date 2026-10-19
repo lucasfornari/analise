@@ -35,6 +35,8 @@ export class Painel {
     this.dica = new Dica();
     this.qualidade = new QualidadeLeitura(this);
     new Atalhos(this);
+    // largura da janela muda quantos meses cabem nas tabelas mês a mês
+    addEventListener('resize', () => { clearTimeout(this.esperaResize); this.esperaResize = setTimeout(() => this.redimensionar(), 150); });
 
     this.botaoLimpar = $('#btnReset');
     this.botaoLimpar.onclick = () => this.limparFiltros();
@@ -84,6 +86,7 @@ export class Painel {
   }
 
   redimensionar() {
+    if (this.estado.agregado) this.tabelas.renderizar();   // nº de meses nas tabelas mês a mês depende da largura
     this.mapa.redimensionar();
     this.graficos.redimensionar();
   }
