@@ -2,7 +2,8 @@
 import { escaparHtml } from '../util/formatacao.js';
 
 // coluna: { k: campo, h: título, num: alinhada à direita, cls: classe CSS,
-//           f: (linha) => html da célula, v: (linha) => valor usado para ordenar }
+//           f: (linha) => html da célula, v: (linha) => valor usado para ordenar,
+//           dica: (linha) => html do tooltip ao passar o mouse na célula (js/ui/Dica.js) }
 export class Tabela {
   // chave: identifica a tabela no estado.ordenacao; aoOrdenar: re-renderiza o painel
   constructor(elemento, chave, estado, aoOrdenar) {
@@ -20,6 +21,8 @@ export class Tabela {
       ? visiveis.map((linha, i) => this.#linhaHtml(linha, i, colunas, opcoes)).join('')
       : `<tr><td colspan="${colunas.length}" class="vazio">Nenhum evento com esses filtros</td></tr>`;
     this.elemento.innerHTML = `<thead><tr>${cabecalho}</tr></thead><tbody>${corpo}</tbody>`;
+    // tooltip calculado só no hover, a partir da linha e da coluna da célula
+    this.elemento._dica = td => colunas[td.cellIndex]?.dica?.(visiveis[+td.closest('tr').dataset.i]);
 
     this.elemento.querySelectorAll('th').forEach(th => th.onclick = () => this.#alternarOrdem(th.dataset.k));
     if (opcoes.aoClicar) {
@@ -29,7 +32,7 @@ export class Tabela {
 
   #linhaHtml(linha, i, colunas, opcoes) {
     const classes = `${opcoes.aoClicar ? 'click ' : ''}${opcoes.selecionada?.(linha) ? 'sel' : ''}`;
-    const celulas = colunas.map(c => `<td class="${c.num ? 'num' : ''} ${c.cls || ''}">${c.f ? c.f(linha) : escaparHtml(linha[c.k])}</td>`).join('');
+    const celulas = colunas.map(c => `<td class="${c.num ? 'num' : ''} ${c.cls || ''}"${c.dica ? ' data-dica' : ''}>${c.f ? c.f(linha) : escaparHtml(linha[c.k])}</td>`).join('');
     return `<tr class="${classes}" data-i="${i}">${celulas}</tr>`;
   }
 

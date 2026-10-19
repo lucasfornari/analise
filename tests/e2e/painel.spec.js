@@ -136,6 +136,32 @@ test.describe('com a planilha carregada', () => {
     await expect(linhas(page, 'tblCliMes').filter({ hasText: 'GAMA' }).locator('.variacao')).toHaveText('▲ novo');
   });
 
+  test('exceções pelo nome: etiquetas na tabela e tooltip ao passar o mouse no motorista', async ({ page }) => {
+    const joao = linhas(page, 'tblMot').filter({ hasText: 'JOÃO DA SILVA' });
+    await expect(joao.locator('.tag.exc').first()).toHaveText('Velocidade excedida faixa 1 7');
+    await expect(joao.locator('.tag.mais')).toHaveText('+3');                         // 4 tipos: a principal na célula + 3
+    const dica = page.locator('#dica');
+    await joao.locator('td').first().hover();
+    await expect(dica).toBeVisible();
+    await expect(dica.locator('.dica-titulo')).toContainText('JOÃO DA SILVA');
+    await expect(dica.locator('.dica-titulo')).toContainText('10 eventos · 4 exceções');
+    await expect(dica.locator('.dica-titulo')).toContainText('exceções de motorista');
+    await expect(dica.locator('li')).toHaveCount(4);
+    await expect(dica.locator('li').first()).toHaveText('Velocidade excedida faixa 17' + '70,0%');
+    await page.mouse.move(0, 0);
+    await expect(dica).toBeHidden();
+
+    // placa: só exceções de veículo e contexto (as de motorista da mesma placa ficam de fora)
+    const celula = linhas(page, 'tblPlaca').filter({ hasText: 'ABC1D23' }).locator('td.col-excecoes');
+    await celula.scrollIntoViewIfNeeded();
+    await esperarRolagem(page);                                                        // rolar esconde o balão
+    await celula.hover();
+    await expect(dica).toBeVisible();
+    await expect(dica.locator('.dica-titulo')).toContainText('ABC1D23');
+    await expect(dica.locator('.dica-titulo')).toContainText('2 eventos · 1 exceção');
+    await expect(dica.locator('li')).toHaveText(['Sem posicao fora de area de risco (com sm)2100,0%']);
+  });
+
   test('mapa: clique no local mostra o resumo e o clique direto no mapa encontra o local', async ({ page }) => {
     await linhas(page, 'tblLoc').first().click();                                     // RECIFE - PE, 10 eventos
     const popup = page.locator('.popup-local');
@@ -143,6 +169,9 @@ test.describe('com a planilha carregada', () => {
     await expect(popup.locator('.popup-cabecalho')).toContainText('10 eventos · 3 placas · 2 motoristas · 4 SMs');
     await expect(popup.locator('.popup-cabecalho')).toContainText('Último evento: 19/09/2026, 04:15');
     await expect(popup.locator('.popup-coordenada')).toHaveText('-8.05000, -34.90000');
+    await expect(popup.locator('.popup-excecoes li')).toHaveCount(5);                   // 5 principais de 8
+    await expect(popup.locator('.popup-excecoes li').first()).toContainText('Velocidade excedida faixa 3');
+    await expect(popup.locator('.popup-excecoes .lista-resto')).toHaveText('e mais 3 exceções (3 eventos)');
     await expect(popup.locator('.popup-topo li').first()).toContainText('GHI7J89');
     const gmapsPopup = popup.locator('.popup-titulo a.icone-mapa');                  // ícone já no popup, sem abrir os detalhes
     await expect(gmapsPopup).toHaveAttribute('href', 'https://www.google.com/maps/search/?api=1&query=-8.050000,-34.900000');
@@ -209,6 +238,10 @@ test.describe('com a planilha carregada', () => {
     await page.locator('#detalheAbas button', { hasText: 'Motoristas' }).click();
     await expect(linhas(page, 'tblDetalhe')).toHaveCount(2);
     await expect(linhas(page, 'tblDetalhe').filter({ hasText: 'ANA COSTA' })).toContainText('JKL0M12 (4), XX123 (1)');
+    await page.locator('#detalheAbas button', { hasText: 'Exceções' }).click();      // cada exceção do local, com quantidade
+    await expect(linhas(page, 'tblDetalhe')).toHaveCount(8);
+    await expect(linhas(page, 'tblDetalhe').first()).toContainText('Velocidade excedida faixa 3');
+    await expect(linhas(page, 'tblDetalhe').first().locator('td.num').first()).toHaveText('2');
     await page.locator('#detalheAbas button', { hasText: 'Eventos' }).click();
     await expect(linhas(page, 'tblDetalhe')).toHaveCount(10);
     await expect(linhas(page, 'tblDetalhe').first()).toContainText('19/09/2026, 04:15');
@@ -226,6 +259,22 @@ test.describe('com a planilha carregada', () => {
 
     await page.keyboard.press('Escape');
     await expect(janela).toBeHidden();
+  });
+
+  test('mapa: nos detalhes, tooltip das exceções da placa e clique na exceção filtra o painel', async ({ page }) => {
+    await linhas(page, 'tblLoc').first().click();
+    await page.locator('.popup-local [data-detalhe]').click();
+    const placa = linhas(page, 'tblDetalhe').filter({ hasText: 'GHI7J89' });
+    await expect(placa.locator('.tag.exc').first()).toHaveText('Violacao porta bau 2');
+    await placa.locator('td').first().hover();
+    const dica = page.locator('#dica');
+    await expect(dica).toBeVisible();                                                   // aparece por cima da janela (dialog)
+    await expect(dica.locator('.dica-titulo')).toContainText('5 eventos · 4 exceções');
+    await page.locator('#detalheAbas button', { hasText: 'Exceções' }).click();
+    await linhas(page, 'tblDetalhe').filter({ hasText: 'Violacao porta bau' }).click();
+    await expect(page.locator('#detalheLocal')).toBeHidden();
+    await expect(page.locator('#activeFilters')).toContainText('Violacao porta bau');
+    await expect(kpi(page, 0)).toHaveText('2');
   });
 
   test('mapa: clicar numa placa nos detalhes filtra o painel por ela', async ({ page }) => {

@@ -1,20 +1,19 @@
-// Janela de detalhes de um ponto do mapa (uma coordenada): placas, motoristas e todos os eventos, com busca e exportação.
-// Clicar numa placa ou num motorista filtra o painel inteiro por ele.
+// Janela de detalhes de um ponto do mapa (uma coordenada): placas, motoristas, exceções e todos os eventos, com busca e exportação.
+// Clicar numa placa, motorista ou exceção filtra o painel inteiro por ela.
 import { $, $$ } from '../util/dom.js';
-import { formatarNumero, escaparHtml, abreviarCliente, capitalizar, formatarDataHora, formatarCoordenada } from '../util/formatacao.js';
+import { formatarNumero, formatarPercentual, escaparHtml, abreviarCliente, capitalizar, formatarDataHora, formatarCoordenada } from '../util/formatacao.js';
 import { baixarArquivo } from '../util/download.js';
 import { iconeGoogleMaps } from '../util/links.js';
-import { CLASSE_DO_GRUPO, ROTULO_GRUPO, ROTULO_CLASSE } from '../nucleo/catalogoExcecoes.js';
+import { ROTULO_CLASSE } from '../nucleo/catalogoExcecoes.js';
 import { detalharLocal, buscarNoDetalhe } from '../nucleo/detalheLocal.js';
 import { gerarCsv } from '../nucleo/exportacao.js';
 import { EM_BRANCO } from '../nucleo/filtro.js';
 import { Tabela } from './Tabela.js';
+import { etiquetasExcecoes, dicaExcecoes } from './etiquetasExcecoes.js';
 
 const LINHAS_POR_PAGINA = 100;
 const porFrequencia = mapa => [...mapa.entries()].sort((a, b) => b[1] - a[1]);
 
-const etiquetas = (grupos, limite = 2) => porFrequencia(grupos).slice(0, limite)
-  .map(([g, n]) => `<span class="tag ${(CLASSE_DO_GRUPO[g] || '').toLowerCase()}">${ROTULO_GRUPO[g]} ${formatarNumero(n)}</span>`).join('');
 // "JOÃO (3), MARIA (1)" com no máximo 3 nomes
 const nomesComContagem = mapa => {
   const itens = porFrequencia(mapa);
@@ -23,7 +22,7 @@ const nomesComContagem = mapa => {
 const cliente = linha => `<span title="${escaparHtml(linha.cliente)}">${escaparHtml(abreviarCliente(linha.cliente))}</span>`;
 
 export class DetalheLocal {
-  aba = 'placas';          // 'placas' | 'motoristas' | 'eventos'
+  aba = 'placas';          // 'placas' | 'motoristas' | 'excecoes' | 'eventos'
   limite = LINHAS_POR_PAGINA;
   local = null;
   detalhe = null;
@@ -95,25 +94,39 @@ export class DetalheLocal {
   // [colunas da aba, ação ao clicar numa linha]
   #colunas() {
     const filtrarPor = (lista, valor) => valor === EM_BRANCO ? undefined : () => this.#filtrarPainel(lista, valor);
+    const classeDe = this.painel.estado.agregado.classeDaExcecao;
+    // exceções da placa ou do motorista neste local: nome e quantidade, com a lista completa no tooltip
+    const excecoes = nome => ({ k: 'excecoes', h: 'Exceções', v: x => x.total, cls: 'col-excecoes',
+      f: x => etiquetasExcecoes(x.porExcecao, classeDe), dica: x => dicaExcecoes(x[nome], x.porExcecao, classeDe, ['neste local']) });
     if (this.aba === 'placas') return [[
-      { k: 'placa', h: 'Placa', f: p => `<b>${escaparHtml(p.placa)}</b>` },
+      { k: 'placa', h: 'Placa', f: p => `<b>${escaparHtml(p.placa)}</b>`, dica: p => dicaExcecoes(p.placa, p.porExcecao, classeDe, ['neste local']) },
       { k: 'carretas', h: 'Carreta', v: p => [...p.carretas].join(' '), f: p => escaparHtml([...p.carretas].join(', ')) },
       { k: 'motoristas', h: 'Motoristas', v: p => p.motoristas.size, f: p => nomesComContagem(p.motoristas) },
       { k: 'cliente', h: 'Cliente', f: cliente },
       { k: 'total', h: 'Eventos', num: true, f: p => `<b>${formatarNumero(p.total)}</b>` },
       { k: 'nViagens', h: 'SMs', num: true },
       { k: 'ultimo', h: 'Último evento', v: p => p.ultimo?.getTime() ?? 0, f: p => `<span class="nowrap">${formatarDataHora(p.ultimo)}</span>` },
-      { k: 'grupos', h: 'Grupos', v: p => p.total, f: p => etiquetas(p.grupos) }
+      excecoes('placa')
     ], p => filtrarPor('pla', p.placa)?.()];
     if (this.aba === 'motoristas') return [[
-      { k: 'motorista', h: 'Motorista', f: m => `<b>${escaparHtml(m.motorista)}</b>` },
+      { k: 'motorista', h: 'Motorista', f: m => `<b>${escaparHtml(m.motorista)}</b>`, dica: m => dicaExcecoes(m.motorista, m.porExcecao, classeDe, ['neste local']) },
       { k: 'placas', h: 'Placas', v: m => m.placas.size, f: m => nomesComContagem(m.placas) },
       { k: 'cliente', h: 'Cliente', f: cliente },
       { k: 'total', h: 'Eventos', num: true, f: m => `<b>${formatarNumero(m.total)}</b>` },
       { k: 'nViagens', h: 'SMs', num: true },
       { k: 'ultimo', h: 'Último evento', v: m => m.ultimo?.getTime() ?? 0, f: m => `<span class="nowrap">${formatarDataHora(m.ultimo)}</span>` },
-      { k: 'grupos', h: 'Grupos', v: m => m.total, f: m => etiquetas(m.grupos) }
+      excecoes('motorista')
     ], m => filtrarPor('mot', m.motorista)?.()];
+    if (this.aba === 'excecoes') return [[
+      { k: 'excecao', h: 'Exceção', f: e => `<b>${escaparHtml(capitalizar(e.excecao))}</b>` },
+      { k: 'classe', h: 'Classe', v: e => ROTULO_CLASSE[e.classe], f: e => `<span class="tag ${e.classe.toLowerCase()}">${ROTULO_CLASSE[e.classe]}</span>` },
+      { k: 'total', h: 'Eventos', num: true, f: e => `<b>${formatarNumero(e.total)}</b>` },
+      { k: 'pct', h: '%', num: true, v: e => e.total, f: e => formatarPercentual(e.total / this.detalhe.resumo.eventos) },
+      { k: 'nPlacas', h: 'Placas', num: true },
+      { k: 'nMotoristas', h: 'Motoristas', num: true },
+      { k: 'nViagens', h: 'SMs', num: true },
+      { k: 'ultimo', h: 'Último evento', v: e => e.ultimo?.getTime() ?? 0, f: e => `<span class="nowrap">${formatarDataHora(e.ultimo)}</span>` }
+    ], e => filtrarPor('exc', e.excecao)()];
     return [[
       { k: 'data', h: 'Data/hora', v: e => e.registro.data?.getTime() ?? 0, f: e => `<span class="nowrap">${formatarDataHora(e.registro.data)}</span>` },
       { k: 'excecao', h: 'Exceção', v: e => e.registro.excecao,
