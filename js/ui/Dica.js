@@ -14,8 +14,10 @@ export class Dica {
     document.addEventListener('mouseout', e => { if (this.alvo && !this.alvo.contains(e.relatedTarget)) this.esconder(); });
     document.addEventListener('focusin', e => this.#entrar(e.target));
     document.addEventListener('focusout', () => this.esconder());
-    // rolar ou clicar (que pode re-renderizar a tabela) tira o balão do lugar
-    addEventListener('scroll', () => this.esconder(), true);
+    // rolar tira o balão do lugar: some durante a rolagem e volta no fim se o mouse ainda estiver no alvo
+    // (sem isso, parar o mouse sobre um nome enquanto a página ainda rola nunca mostrava o balão)
+    addEventListener('scroll', () => this.#aoRolar(), true);
+    // clicar pode re-renderizar a tabela
     document.addEventListener('pointerdown', () => this.esconder(), true);
     document.addEventListener('keydown', e => { if (e.key === 'Escape') this.esconder(); });
   }
@@ -57,6 +59,16 @@ export class Dica {
     const esquerda = x + 16 + width <= innerWidth - MARGEM ? x + 16 : x - 16 - width;
     const topo = Math.min(Math.max(MARGEM, y + 16), innerHeight - height - MARGEM);
     Object.assign(this.caixa.style, { left: Math.max(MARGEM, esquerda) + 'px', top: topo + 'px' });
+  }
+
+  #aoRolar() {
+    const alvo = this.alvo;
+    if (!alvo) return;
+    clearTimeout(this.espera);
+    this.caixa.hidden = true;
+    this.espera = setTimeout(() => {
+      if (this.alvo === alvo && alvo.isConnected && alvo.matches(':hover')) this.#mostrar(alvo);
+    }, ATRASO_MS);
   }
 
   esconder() {

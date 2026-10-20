@@ -1,0 +1,148 @@
+/* Relatório em PDF (js/ui/relatorio): folhas A4 verticais com as cores e fontes do painel.
+   Na tela o contêiner fica fora da área visível (é lá que as folhas são medidas e paginadas);
+   na impressão, com body.imprimindo-relatorio, ele é a única coisa impressa. */
+#relatorio{position:absolute;left:-10000px;top:0;width:210mm;color:var(--ink);font-family:var(--f);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+#relatorio[hidden]{display:none}
+.folha{width:210mm;height:297mm;padding:13mm 14mm 10mm;box-sizing:border-box;display:flex;flex-direction:column;background:#fff;overflow:hidden;break-after:page;font-size:9.5pt;line-height:1.35}
+.folha:last-child{break-after:auto}
+/* A4 vertical sem margem do navegador (sem cabeçalho/rodapé do Chrome); vale para toda impressão da página */
+@page{size:A4 portrait;margin:0}
+
+/* cabeçalho, título e rodapé das folhas internas */
+.folha-topo{display:flex;align-items:center;gap:3mm;border-bottom:.6mm solid var(--navy);padding-bottom:2.5mm;margin-bottom:5mm;font-size:8pt;color:var(--muted)}
+.folha-topo .logo{height:5.5mm;width:auto;color:var(--navy);display:block}
+.folha-topo > span:first-of-type{padding-left:3mm;border-left:1px solid var(--line)}
+.folha-topo .contexto{margin-left:auto;text-align:right}
+.folha-topo .contexto b{color:var(--navy)}
+.folha h1{font-family:var(--fc);font-size:22pt;line-height:1.1;color:var(--navy);margin:0 0 1.5mm}
+.folha h1 small{font-size:12pt;color:var(--muted);font-weight:500}
+.folha h2{font-family:var(--fc);font-size:13pt;color:var(--navy);margin:0 0 2mm}
+.folha .lead{color:var(--muted);margin:0 0 5mm;font-size:9.5pt}
+.folha .lead b{color:var(--ink)}
+.folha-conteudo{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:5mm}
+.folha-conteudo > *{flex-shrink:0}   /* blocos nunca encolhem: a medição precisa ver o tamanho real para paginar */
+.folha-rodape{display:flex;justify-content:space-between;border-top:1px solid var(--line);padding-top:2mm;margin-top:3mm;font-size:7.5pt;color:var(--muted)}
+.folha .apagado{color:var(--muted)}
+.folha a{color:var(--navy)}
+
+/* cartões de indicador */
+.cartoes-rel{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm}
+.cartoes-rel.quatro{grid-template-columns:repeat(4,1fr)}
+.cartao-rel{border:1px solid var(--line);border-radius:2.5mm;padding:3mm 3.5mm;background:var(--soft);display:flex;flex-direction:column;gap:.5mm;border-top:1mm solid var(--navy)}
+.cartao-rel b{font-family:var(--fc);font-size:20pt;line-height:1.05;color:var(--navy)}
+.cartao-rel span{font-size:8.5pt;color:var(--muted)}
+.cartao-rel small{font-size:8pt;color:var(--ink)}
+.cartao-rel.motorista{border-top-color:var(--indigo)}
+.cartao-rel.contexto{border-top-color:var(--neon)}
+
+/* classes, legendas e gráficos */
+.barra-classes{display:flex;height:5mm;border-radius:1.5mm;overflow:hidden;margin-bottom:2mm}
+.barra-classes i.motorista{background:var(--indigo)} .barra-classes i.veiculo{background:var(--navy)} .barra-classes i.contexto{background:var(--neon)}
+.classes-rel{display:flex;gap:7mm}
+.classes-rel div{display:flex;align-items:center;gap:1.5mm}
+.legenda-rel{display:flex;gap:6mm;font-size:8.5pt;color:var(--muted)}
+.legenda-rel span,.classes-rel div{display:inline-flex;align-items:center;gap:1.5mm}
+.legenda-bloco{margin-bottom:-3mm}
+.grafico-rel{display:block;width:100%;object-fit:contain}
+.folha .ponto{display:inline-block;width:2.2mm;height:2.2mm;border-radius:50%;vertical-align:middle;flex-shrink:0;background:var(--muted)}
+.folha .ponto.motorista{background:var(--indigo)} .folha .ponto.veiculo{background:var(--navy)} .folha .ponto.contexto{background:var(--neon);box-shadow:0 0 0 .2mm var(--navy)}
+.folha .variacao{white-space:nowrap;font-weight:600}
+.folha .variacao.alta{color:var(--alta)} .folha .variacao.baixa{color:var(--baixa)}
+
+/* tabelas */
+.tabela-rel{width:100%;border-collapse:collapse;font-size:9pt}
+.tabela-rel th{background:var(--navy);color:#fff;text-align:left;font-weight:600;padding:1.8mm 2mm;white-space:nowrap;font-size:8.5pt}
+.tabela-rel td{padding:1.6mm 2mm;border-bottom:1px solid var(--line);vertical-align:top}
+.tabela-rel tbody tr:nth-child(even) td{background:var(--soft)}
+.tabela-rel .num{text-align:right;white-space:nowrap}
+.tabela-rel tr.resto td{color:var(--muted);font-style:italic}
+.tabela-rel.numerica td{vertical-align:middle}
+.barra-col{width:30mm}
+.barra-rel{height:2.6mm;border-radius:1mm;background:var(--indigo)}
+.barra-rel.veiculo{background:var(--navy)} .barra-rel.contexto{background:var(--neon);box-shadow:inset 0 0 0 .2mm var(--navy)}
+/* clientes: larguras fixas (10 colunas em 182 mm); nomes longos cortam com reticências */
+.tabela-clientes{table-layout:fixed}
+.tabela-clientes th:nth-child(1){width:7mm} .tabela-clientes th:nth-child(2){width:40mm} .tabela-clientes th:nth-child(3){width:19mm}
+.tabela-clientes th:nth-child(4){width:12mm} .tabela-clientes th:nth-child(5){width:16mm} .tabela-clientes th:nth-child(6),.tabela-clientes th:nth-child(7){width:13mm}
+.tabela-clientes th:nth-child(8){width:11mm} .tabela-clientes th:nth-child(9){width:18mm}
+.tabela-clientes td,.tabela-clientes th{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* listas top N: nome com linha de apoio e principais exceções */
+.lista-rel td.posicao{font-family:var(--fc);font-size:14pt;font-weight:700;color:var(--navy);width:7mm}
+.lista-rel .col-nome{width:52mm}
+.nome-rel{display:block;color:var(--navy);font-size:9.5pt;word-break:break-word}
+.apoio-rel{display:block;color:var(--muted);font-size:7.5pt;line-height:1.3;word-break:break-word}
+.exc-rel{list-style:none;margin:0;padding:0;font-size:8pt;line-height:1.3}
+.exc-rel li{display:grid;grid-template-columns:2.6mm 1fr auto 10mm;gap:1.5mm;align-items:center}
+.exc-rel li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.exc-rel li b{font-variant-numeric:tabular-nums}
+.exc-rel li small{color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.exc-rel li.resto{display:block;color:var(--muted);font-style:italic}
+
+/* modo compacto: aplicado só quando o conteúdo não cabe na folha */
+.folha.compacta{font-size:8.5pt}
+.folha.compacta .tabela-rel{font-size:8pt}
+.folha.compacta .tabela-rel td{padding:1mm 1.6mm}
+.folha.compacta .exc-rel{font-size:7.3pt;line-height:1.2}
+.folha.compacta .lista-rel td.posicao{font-size:11pt}
+.folha.compacta .folha-conteudo{gap:3.5mm}
+
+/* resumo */
+.destaques-rel{margin:0;padding-left:5mm;display:flex;flex-direction:column;gap:1.8mm}
+.sumario-rel{list-style:none;margin:0;padding:0;counter-reset:item}
+.sumario-rel li{display:flex;align-items:baseline;gap:2mm;padding:1.2mm 0}
+.sumario-rel li i{flex:1;border-bottom:1px dotted var(--muted)}
+.sumario-rel li b{color:var(--navy)}
+.nota-rel{font-size:8.5pt;color:var(--muted);border-left:1mm solid var(--line);padding-left:3mm}
+.nota-rel p{margin:0 0 1mm}
+
+/* notas */
+.regras-rel{margin:0;display:grid;grid-template-columns:42mm 1fr;gap:2mm 4mm;font-size:8.8pt}
+.regras-rel dt{font-weight:700;color:var(--navy)}
+.regras-rel dd{margin:0}
+.qualidade-rel{display:grid;grid-template-columns:1fr 1fr;gap:1mm 6mm;font-size:8.8pt}
+.qualidade-rel div{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:.8mm 0}
+.fim-bloco{margin-top:auto}
+.fim-rel{text-align:center;border-top:.6mm solid var(--navy);padding-top:6mm;color:var(--muted)}
+.fim-rel .logo{height:8mm;width:auto;color:var(--navy)}
+.fim-rel p{font-family:var(--fc);font-size:14pt;color:var(--navy);margin:2mm 0 1mm}
+
+/* capa */
+.folha.capa{background:var(--navy);color:#fff;padding:18mm 18mm 16mm}
+.capa .folha-conteudo{display:block}
+.capa-conteudo{height:100%;display:flex;flex-direction:column}
+.capa-logo .logo{height:12mm;width:auto;color:#fff}
+.capa-miolo{margin-top:auto;margin-bottom:auto;border-left:1.5mm solid var(--neon);padding-left:7mm}
+.capa-tipo{display:block;color:var(--neon);font-family:var(--fc);font-size:14pt;text-transform:uppercase;letter-spacing:.08em}
+.folha .capa-titulo{font-family:var(--fc);font-size:34pt;line-height:1.05;margin:2mm 0 2mm;color:#fff;word-break:break-word}
+.capa-detalhe,.capa-periodo{margin:0;font-size:13pt;color:#B9B7E6}
+.capa-periodo{margin-top:2mm;color:#fff}
+.capa-numeros{display:grid;grid-template-columns:repeat(4,1fr);gap:4mm;margin-top:12mm}
+.capa-numeros b{display:block;font-family:var(--fc);font-size:22pt;color:var(--neon)}
+.capa-numeros span{font-size:8.5pt;color:#B9B7E6}
+.capa-rodape{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:6mm;border-top:1px solid #3A3690;padding-top:5mm;font-size:8.5pt}
+.capa-rodape span{display:block;color:var(--neon);font-weight:600;margin-bottom:1mm}
+.capa-rodape p{margin:0;color:#DDDCF5}
+.capa-rodape b{color:#fff}
+
+/* janela de escolha do cliente */
+.modal-pequena{width:min(560px,94vw)}
+.lista-relatorio{display:flex;flex-direction:column;gap:2px;max-height:52vh;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:4px}
+.lista-relatorio label{display:flex;gap:10px;align-items:center;padding:7px 10px;border-radius:6px;cursor:pointer}
+.lista-relatorio label[hidden]{display:none}
+.lista-relatorio label:hover{background:var(--soft)}
+.lista-relatorio label:has(input:checked){background:#E4E3FA}
+.lista-relatorio label span{display:flex;flex-direction:column}
+.lista-relatorio label small{color:var(--muted);font-size:12px}
+.lista-relatorio .opcao-carteira{border-bottom:1px solid var(--line);margin-bottom:2px}
+.lista-relatorio input{accent-color:var(--navy)}
+
+@media print{
+  body.imprimindo-relatorio > :not(#relatorio){display:none !important}
+  html:has(body.imprimindo-relatorio),body.imprimindo-relatorio{background:#fff;margin:0;padding:0;height:auto;min-height:0}
+  body.imprimindo-relatorio #relatorio{position:static;left:auto}
+  body:not(.imprimindo-relatorio) #relatorio{display:none}
+}
+.modal-pequena form{display:flex;flex-direction:column;gap:12px}
+.modal-pequena input[type=search]{height:34px}
+.modal-pequena .modal-rodape span{margin-right:auto}

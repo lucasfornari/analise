@@ -7,7 +7,7 @@ import { CORES, COR_CLASSE, FONTE } from '../config/tema.js';
 // Escreve o valor ao lado (barra horizontal) ou acima (vertical) de cada barra. Na vertical, se algum valor
 // não couber na largura da barra (muitos meses), nenhum é escrito: o gráfico fica uniforme e os valores
 // continuam no tooltip.
-const rotulosDeValor = eixo => ({
+export const rotulosDeValor = eixo => ({
   id: 'rotulosDeValor',
   afterDatasetsDraw(grafico) {
     const { ctx } = grafico;
