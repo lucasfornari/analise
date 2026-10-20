@@ -16,6 +16,7 @@ import { Mapa } from './ui/Mapa.js';
 import { Dica } from './ui/Dica.js';
 import { DetalheLocal } from './ui/DetalheLocal.js';
 import { QualidadeLeitura } from './ui/QualidadeLeitura.js';
+import { RelatorioPdf } from './ui/relatorio/RelatorioPdf.js';
 
 export class Painel {
   constructor() {
@@ -34,6 +35,7 @@ export class Painel {
     this.detalhe = new DetalheLocal(this);
     this.dica = new Dica();
     this.qualidade = new QualidadeLeitura(this);
+    this.relatorio = new RelatorioPdf(this);
     new Atalhos(this);
     // largura da janela muda quantos meses cabem nas tabelas mês a mês
     addEventListener('resize', () => { clearTimeout(this.esperaResize); this.esperaResize = setTimeout(() => this.redimensionar(), 150); });
@@ -48,6 +50,7 @@ export class Painel {
       const resultado = await this.leitor.ler(arquivo, mensagem => this.arquivo.progresso(mensagem));
       this.estado.carregar(resultado, arquivo.name);
       this.arquivo.carregado(arquivo.name, this.estado.registros.length);
+      $('#btnRelatorio').classList.remove('hidden');
       this.filtros.montar();
       this.listas.reiniciar();
       this.atualizar(true);

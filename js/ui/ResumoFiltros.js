@@ -29,21 +29,25 @@ export class ResumoFiltros {
       : 'Sem filtros: mostrando a base inteira';
   }
 
-  // [filtro, html] para cada filtro ativo
   #etiquetas() {
-    const f = this.estado.filtroAtual();
-    const etiquetas = [];
-    if (f.de || f.ate) etiquetas.push(['periodo', `período <b>${formatarDia(f.de) || 'início'} a ${formatarDia(f.ate) || 'fim'}</b>`]);
-    if (f.classes) etiquetas.push(['classes', `classe <b>${[...f.classes].map(c => ROTULO_CLASSE[c]).join(', ') || 'nenhuma'}</b>`]);
-    if (f.placa) etiquetas.push(['placa', `placa contém <b>${escaparHtml(chavePlaca(f.placa))}</b>`]);
-    for (const [lista, { singular, plural }] of Object.entries(LISTAS)) {
-      const sel = f.listas[lista];
-      if (!sel) continue;
-      etiquetas.push([lista, sel.size === 1
-        ? `${singular} <b>${escaparHtml(exibir(lista, [...sel][0]))}</b>`
-        : `<b>${formatarNumero(sel.size)}</b> ${plural}`]);
-    }
-    if (f.semDuplicados) etiquetas.push(['semDuplicados', '<b>sem duplicados</b>']);
-    return etiquetas;
+    return etiquetasDosFiltros(this.estado);
   }
+}
+
+// [filtro, html] para cada filtro ativo (também usado na capa e nas notas do relatório em PDF).
+export function etiquetasDosFiltros(estado) {
+  const f = estado.filtroAtual();
+  const etiquetas = [];
+  if (f.de || f.ate) etiquetas.push(['periodo', `período <b>${formatarDia(f.de) || 'início'} a ${formatarDia(f.ate) || 'fim'}</b>`]);
+  if (f.classes) etiquetas.push(['classes', `classe <b>${[...f.classes].map(c => ROTULO_CLASSE[c]).join(', ') || 'nenhuma'}</b>`]);
+  if (f.placa) etiquetas.push(['placa', `placa contém <b>${escaparHtml(chavePlaca(f.placa))}</b>`]);
+  for (const [lista, { singular, plural }] of Object.entries(LISTAS)) {
+    const sel = f.listas[lista];
+    if (!sel) continue;
+    etiquetas.push([lista, sel.size === 1
+      ? `${singular} <b>${escaparHtml(exibir(lista, [...sel][0]))}</b>`
+      : `<b>${formatarNumero(sel.size)}</b> ${plural}`]);
+  }
+  if (f.semDuplicados) etiquetas.push(['semDuplicados', '<b>sem duplicados</b>']);
+  return etiquetas;
 }

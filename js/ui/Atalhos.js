@@ -15,8 +15,8 @@ export class Atalhos {
   }
 
   #tratar(e, painel) {
-    // com a janela de detalhes aberta, as teclas são dela (Esc fecha, L digita na busca)
-    if (e.repeat || painel.detalhe.aberta) return;
+    // com uma janela aberta (detalhes do local, escolha do relatório), as teclas são dela (Esc fecha, L digita na busca)
+    if (e.repeat || document.querySelector('dialog[open]')) return;
     const modificador = e.ctrlKey || e.metaKey;
     if (modificador && !e.shiftKey && !e.altKey && e.code === 'KeyB') {
       e.preventDefault();

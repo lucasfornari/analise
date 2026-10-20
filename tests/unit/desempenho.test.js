@@ -8,6 +8,8 @@ import { abrirXlsx } from '../../js/servicos/leitorXlsx.js';
 import { normalizarPlanilha } from '../../js/nucleo/normalizacao.js';
 import { filtrarComFacetas } from '../../js/nucleo/filtro.js';
 import { agregar } from '../../js/nucleo/agregacao.js';
+import { montarRelatorio } from '../../js/nucleo/relatorio/montarRelatorio.js';
+import { FOLHAS_DO_RELATORIO, OPCOES_DO_RELATORIO } from '../../js/config/relatorio.js';
 import { linhasEmMassa, xlsxDoExport } from '../fixtures/planilhas.js';
 
 const LINHAS = 50_000;
@@ -35,4 +37,7 @@ test(`${LINHAS.toLocaleString('pt-BR')} linhas: leitura, normalização, filtro 
   const { filtrados } = medir('filtro com facetas', 500, () => filtrarComFacetas(registros, filtro));
   const a = medir('agregação', 1000, () => agregar(filtrados));
   assert.ok(a.n > 0 && a.reincidencia.motoristas.lista.length > 0);
+  const relatorio = medir('cálculo do relatório (carteira)', 2000, () =>
+    montarRelatorio(registros, { ids: FOLHAS_DO_RELATORIO.map(f => f.id), opcoes: OPCOES_DO_RELATORIO, carteira: true }));
+  assert.equal(relatorio.secoes.motoristas.dados.itens.length, OPCOES_DO_RELATORIO.topN);
 });
