@@ -7,7 +7,11 @@ import { CATALOGO, ROTULO_CLASSE } from '../../js/nucleo/catalogoExcecoes.js';
 // para gerar o PDF de verdade (page.pdf dispara o "afterprint", que descartaria o relatório).
 const prepararImpressao = page => page.evaluate(() => {
   document.querySelector('#relatorio').dataset.manter = '1';
-  window.print = () => { window.__impressoes = (window.__impressoes || 0) + 1; };
+  window.print = () => {
+    window.__impressoes = (window.__impressoes || 0) + 1;
+    // gráficos já carregados quando a janela de impressão abre (senão saem em branco)
+    window.__graficosProntos = [...document.querySelectorAll('#relatorio img')].every(i => i.complete && i.naturalWidth > 0);
+  };
 });
 const impressoes = page => page.evaluate(() => window.__impressoes || 0);
 
@@ -49,6 +53,7 @@ test('relatório de um cliente: escolha, 8 folhas A4, uma página por folha, cap
   await expect(folhas.nth(4).locator('tbody tr').first()).toContainText('JOÃO DA SILVA');
   await expect(folhas.nth(4).locator('tbody tr').first()).toContainText('Velocidade excedida faixa 1770,0%');
   await expect(folhas.last().locator('.rodape-pagina')).toHaveText('Página 8 de 8');
+  expect(await page.evaluate(() => window.__graficosProntos)).toBe(true);
   expect(await transbordam(page)).toEqual([]);
   expect(await paginasDoPdf(page)).toEqual({ paginas: 8, a4: true });
 });

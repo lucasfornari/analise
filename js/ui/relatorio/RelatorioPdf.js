@@ -74,6 +74,8 @@ export class RelatorioPdf {
       await new Promise(requestAnimationFrame);   // mostra o "Gerando…" antes do cálculo
       await document.fonts?.ready;
       this.montar(cliente);
+      // os gráficos são imagens: imprimir antes de carregarem deixa quadrados em branco no PDF
+      await Promise.all([...this.raiz.querySelectorAll('img')].map(img => img.decode().catch(() => {})));
       document.body.classList.add('imprimindo-relatorio');
       this.tituloOriginal = document.title;
       document.title = this.nomeDoArquivo;      // vira o nome sugerido do PDF
