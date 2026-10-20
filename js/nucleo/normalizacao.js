@@ -3,6 +3,7 @@ import { normalizarChave, limparTexto, chavePlaca, placaValida } from './texto.j
 import { converterData, converterNumero } from './conversores.js';
 import { localizarCabecalho, mapearColunas, COLUNAS_OBRIGATORIAS } from './colunas.js';
 import { classificarExcecao, classeInformada } from './catalogoExcecoes.js';
+import { corrigirLongitude, ufDaReferencia } from './coordenadas.js';
 
 const doisDigitos = n => String(n).padStart(2, '0');
 const linhaVazia = linha => !linha || linha.every(v => v == null || String(v).trim() === '');
@@ -43,14 +44,15 @@ function memorizar(funcao) {
   };
 }
 
-function coordenadas(lat, lon) {
+// Válida = dentro do globo e diferente de 0,0; a longitude dobrada do BI é corrigida (js/nucleo/coordenadas.js).
+function coordenadas(lat, lon, uf) {
   const valida = lat != null && lon != null && Math.abs(lat) <= 90 && Math.abs(lon) <= 180 && !(lat === 0 && lon === 0);
-  return valida ? { lat, lon } : { lat: null, lon: null };
+  return valida ? { lat, ...corrigirLongitude(lat, lon, uf) } : { lat: null, lon: null, corrigida: false };
 }
 
 function novasEstatisticas() {
   return {
-    lidas: 0, vazias: 0, descartadas: 0, semData: 0, semCoord: 0, duplicadas: 0,
+    lidas: 0, vazias: 0, descartadas: 0, semData: 0, semCoord: 0, coordCorrigidas: 0, duplicadas: 0,
     naoCatalogadas: 0, classeCorrigida: 0, placasForaDoPadrao: 0, excecoesNaoCatalogadas: []
   };
 }
@@ -74,6 +76,7 @@ export function normalizarPlanilha(linhas) {
   const classificar = memorizar(nome => classificarExcecao(nome, null));
   const placaDe = memorizar(chavePlaca);
   const localDe = memorizar(ref => rotulo.local.rotulo(localDaReferencia(ref)));
+  const ufDe = memorizar(ufDaReferencia);
   const maiusculas = memorizar(v => limparTexto(v).toUpperCase());
   // classe da coluna "classe" (null se não reconhecida, undefined se vazia)
   const classeDaPlanilha = memorizar(v => limparTexto(v) ? classeInformada(v) : undefined);
@@ -104,8 +107,9 @@ export function normalizarPlanilha(linhas) {
 
     const data = converterData(celula(linha, 'data'));
     if (!data) estatisticas.semData++;
-    const { lat, lon } = coordenadas(converterNumero(celula(linha, 'lat')), converterNumero(celula(linha, 'lon')));
+    const { lat, lon, corrigida } = coordenadas(converterNumero(celula(linha, 'lat')), converterNumero(celula(linha, 'lon')), ufDe(celula(linha, 'referencia')));
     if (lat == null) estatisticas.semCoord++;
+    if (corrigida) estatisticas.coordCorrigidas++;
     const placa = placaDe(celula(linha, 'placa'));
     if (placa && !placaValida(placa)) estatisticas.placasForaDoPadrao++;
 

@@ -18,6 +18,7 @@ export class QualidadeLeitura {
       ['Descartadas (sem cliente/exceção)', formatarNumero(e.descartadas)],
       ['Sem data', formatarNumero(e.semData)],
       ['Sem coordenada', formatarNumero(e.semCoord)],
+      ['Longitude corrigida (vinha dobrada no BI)', formatarNumero(e.coordCorrigidas)],
       ['Classe corrigida pelo catálogo', formatarNumero(e.classeCorrigida)],
       ['Exceções fora do catálogo', formatarNumero(e.naoCatalogadas)],
       ['Placas fora do padrão', formatarNumero(e.placasForaDoPadrao)],

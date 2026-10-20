@@ -44,6 +44,12 @@ Semântico e automático (`scripts/versao.js`, padrão Conventional Commits), ca
 - `feat:` → menor (v0.4.2 → v0.5.0)
 - qualquer outro (`fix:`, `refactor:`, `test:`, sem prefixo…) → correção (v0.4.2 → v0.4.3)
 
+Quando usar cada um (combinado com o dono do projeto):
+- `feat:` só para funcionalidade nova de verdade: nova tela, aba, filtro, gráfico, tipo de análise ou de arquivo aceito.
+- `fix:` para todo o resto que o usuário percebe: correções, ajustes de UX/layout, textos e melhorias pequenas em algo que já existe (ex.: tooltip a mais, coluna reordenada, rótulo que não corta), mesmo que acrescentem algo.
+- `refactor:`, `test:`, `ci:`, `docs:` para mudanças sem efeito visível; também viram correção.
+- Um PR que mistura tipos usa o mais forte no título; na dúvida entre `feat:` e `fix:`, use `fix:`. Não divida um mesmo trabalho em vários PRs só por causa da versão.
+
 Use esses prefixos nos títulos de PR e commits. Não edite a versão à mão: no repositório `js/config/versao.js` fica vazio e o rodapé mostra "versão local (desenvolvimento)".
 
 ## Arquitetura
@@ -67,6 +73,7 @@ Regras importantes:
 - **O estado é a fonte da verdade.** Componentes alteram `estado.selecao` (ou `ordenacao`/`limites`) e chamam `painel.atualizar()`; cada `renderizar()` reflete o estado nos controles. Não guardar estado de filtro no DOM.
 - Filtros combináveis: período, classe, busca de placa/carreta e 5 listas (`LISTAS` em `Estado.js`: cli, mot, pla, exc, per). `filtrarComFacetas` faz filtro e contagem facetada numa única passada; listas com tudo marcado viram `null` (sem filtro). As listas do menu são montadas por `ListasSelecao` só ao abrir e, por padrão, ocultam opções sem eventos nos demais filtros.
 - `js/nucleo` e `js/servicos` não podem tocar em DOM nem em globais do CDN (dependências injetadas: `unzipSync`, `carregarSheetJs`): é o que permite testá-los em Node e rodá-los no worker.
+- **Coordenadas** (`nucleo/coordenadas.js`): o BI às vezes exporta a longitude DOBRADA (latitude certa; ex.: Ponte Serrada/SC em -103.779 em vez de -51.8895, no Pacífico). `corrigirLongitude` divide por 2 (exato, sem perda de precisão) só quando o ponto está fora da UF da referência e a metade cai dentro dela, ou, sem UF, quando está no Pacífico (sul, a oeste de -82). Pontos legítimos fora do Brasil não mudam ("LIMA/PE" é Peru). Contagem em "Qualidade da leitura".
 - Comparação de textos da planilha sempre via `normalizarChave`; o rótulo exibido é a primeira grafia vista. Datas em texto são **dd/mm/aaaa**, nunca mm/dd; serial do Excel via `dataDoSerialExcel` (horário local).
 - Placas (tabela e reincidência) contam exceções de veículo e contexto; motoristas contam só exceções de motorista. Reincidente = eventos em meses de calendário seguidos; variação mensal = último mês contra o mês de calendário anterior.
 - Mapa: **um ponto por coordenada** (`agregado.pontos`, lat/long arredondadas em 5 casas ≈ 1 m), nunca pela referência em texto — `agregado.locais` (agrupado pela referência, sem a distância "x km de") é só para a tabela "Locais ofensores". Pontos são leves (o export real tem ~120 mil coordenadas): grupos, clientes e referências só via `completarPonto` ao desenhar/abrir. Calor com peso = eventos do ponto e teto no percentil 95 das células do leaflet.heat (`tetoDoCalor`). Marcadores: com o mapa afastado, pontos a menos de 40 px viram um grupo (`nucleo/agrupamentoMapa.js`, configurado em `AGRUPAMENTO` de `config/mapa.js`); a partir do zoom 14 cada coordenada aparece sozinha. Só a área visível é desenhada (no máximo 2 mil). Clique num grupo aproxima o mapa; numa coordenada (ou no calor perto dela) abre o resumo. Clicar num local da tabela vai às suas coordenadas. "Ver detalhes" abre `DetalheLocal` (`<dialog>`) da coordenada: abas Placas/Motoristas/Exceções/Eventos calculadas por `nucleo/detalheLocal.js`, busca, exportação do local e clique para filtrar o painel pela placa/motorista/exceção. Com a janela aberta, `Atalhos` fica desligado.
