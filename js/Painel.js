@@ -17,6 +17,7 @@ import { Dica } from './ui/Dica.js';
 import { DetalheLocal } from './ui/DetalheLocal.js';
 import { QualidadeLeitura } from './ui/QualidadeLeitura.js';
 import { RelatorioPdf } from './ui/relatorio/RelatorioPdf.js';
+import { TelaCheiaMapa } from './ui/TelaCheiaMapa.js';
 
 export class Painel {
   constructor() {
@@ -36,6 +37,7 @@ export class Painel {
     this.dica = new Dica();
     this.qualidade = new QualidadeLeitura(this);
     this.relatorio = new RelatorioPdf(this);
+    this.telaCheia = new TelaCheiaMapa(this);
     new Atalhos(this);
     // largura da janela muda quantos meses cabem nas tabelas mês a mês
     addEventListener('resize', () => { clearTimeout(this.esperaResize); this.esperaResize = setTimeout(() => this.redimensionar(), 150); });

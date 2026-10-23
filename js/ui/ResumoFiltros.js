@@ -23,6 +23,9 @@ export class ResumoFiltros {
     const contador = $('#filterBadge');
     contador.textContent = etiquetas.length;
     contador.classList.toggle('hidden', !etiquetas.length);
+    const noMapa = $('#badgeFiltrosMapa');   // mesmo contador no botão de filtros do mapa em tela cheia
+    noMapa.textContent = etiquetas.length;
+    noMapa.classList.toggle('hidden', !etiquetas.length);
     $('#activeFilters').innerHTML = etiquetas.length
       ? '<span class="rotulo-filtros">Filtrando por</span>' + etiquetas.map(([filtro, html]) =>
         `<button class="etiqueta" data-limpar="${filtro}" title="Remover este filtro">${html}<span aria-hidden="true">✕</span></button>`).join('')

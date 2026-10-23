@@ -110,6 +110,8 @@
           <div class="seg" id="mapMode"><button data-v="heat" class="on">Calor</button><button data-v="points">Locais</button><button data-v="both">Ambos</button></div>
           <div class="seg" id="mapBase"><button data-v="dark" class="on">Escuro</button><button data-v="light">Claro</button><button data-v="ruas">Ruas</button><button data-v="sat">Satélite</button></div>
           <label>Raio <input type="range" id="heatRadius" min="8" max="40" value="18"></label>
+          <button class="btn small so-tela-cheia" id="btnFiltrosMapa" aria-controls="filters" aria-expanded="false" title="Filtros (Ctrl+B)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>Filtros<span class="badge hidden" id="badgeFiltrosMapa"></span></button>
+          <button class="btn small icone" id="btnTelaCheia" aria-pressed="false" title="Mapa em tela cheia" aria-label="Mapa em tela cheia"><svg class="expandir" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><svg class="recolher" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>
         </div>
       </div>
       <div id="map"></div>
