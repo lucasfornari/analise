@@ -50,8 +50,11 @@ test('relatório de um cliente: escolha, 8 folhas A4, uma página por folha, cap
   await expect(page.locator('.capa-numeros')).toContainText('5viagens com exceções');
   await expect(page).toHaveTitle(/^Relatório de exceções - TRANSPORTES ALFA - 03-07-2026 a 12-09-2026$/);
   await expect(page.locator('.sumario-rel li').first()).toContainText('Viagens e exceções por viagem3');
-  // destaque do último mês: exceções, viagens e exceções por viagem na mesma frase
-  await expect(page.locator('.destaques-rel li').first()).toHaveText('Em set/26 foram 8 exceções (▲ +100,0%) em 2 viagens (▲ +100,0%): 4,0 exceções por viagem, 0,0% contra ago/26 (4,0).');
+  // último mês contra o anterior: tabela com as três medidas e a conclusão pelas exceções por viagem
+  const resumo = folhas.nth(1);
+  await expect(resumo.locator('.comparacao-rel tbody tr')).toHaveText([/^Viagens com exceção12/, /^Exceções48/, /^Exceções por viagem4,04,0/]);
+  await expect(resumo.locator('.conclusao-rel')).toHaveText('Em set/26 houve mais viagens com exceção e mais exceções que em ago/26. Resultado: ficou estável. Cada viagem teve, em média, 4,0 exceções, como em ago/26 (4,0).');
+  await expect(folhas.nth(2).locator('.conclusao-rel')).toHaveCount(1);   // a mesma conclusão na folha de viagens
   await expect(folhas.nth(4).locator('tbody tr').first()).toContainText('JOÃO DA SILVA');
   await expect(folhas.nth(4).locator('tbody tr').first()).toContainText('Velocidade excedida faixa 1770,0%');
   await expect(folhas.last().locator('.rodape-pagina')).toHaveText('Página 8 de 8');
