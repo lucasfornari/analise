@@ -4,9 +4,9 @@ import { formatarNumero, rotuloMes, ultimoDiaDoMes, capitalizar } from '../util/
 import { CLASSES, ROTULO_CLASSE, ROTULO_GRUPO, CLASSE_DO_GRUPO } from '../nucleo/catalogoExcecoes.js';
 import { CORES, COR_CLASSE, FONTE } from '../config/tema.js';
 
-// Escreve o valor ao lado (barra horizontal) ou acima (vertical) de cada barra. Na vertical, se algum valor
-// não couber na largura da barra (muitos meses), nenhum é escrito: o gráfico fica uniforme e os valores
-// continuam no tooltip.
+// Escreve o valor ao lado (barra horizontal) ou acima (vertical) de cada barra, e acima de cada ponto de linha.
+// Na vertical, se algum valor não couber na largura da barra (muitos meses), nenhuma barra é rotulada: o gráfico
+// fica uniforme e os valores continuam no tooltip. serie.rotulo(valor) formata o texto (padrão: formatarNumero).
 export const rotulosDeValor = eixo => ({
   id: 'rotulosDeValor',
   afterDatasetsDraw(grafico) {
@@ -14,16 +14,18 @@ export const rotulosDeValor = eixo => ({
     ctx.save();
     ctx.font = '600 11px Barlow, Arial';
     ctx.fillStyle = CORES.ink;
-    const barras = grafico.data.datasets.flatMap((serie, i) => {
+    const itens = grafico.data.datasets.flatMap((serie, i) => {
       const meta = grafico.getDatasetMeta(i);
-      return meta.hidden ? [] : meta.data.map((barra, j) => [barra, serie.data[j]]).filter(([, valor]) => valor);
+      if (meta.hidden) return [];
+      const texto = serie.rotulo || formatarNumero;
+      return meta.data.map((elemento, j) => ({ elemento, valor: serie.data[j], linha: meta.type === 'line', texto: texto(serie.data[j]) }))
+        .filter(x => x.valor);
     });
-    const cabem = eixo === 'x' || barras.every(([barra, valor]) => ctx.measureText(formatarNumero(valor)).width <= barra.width + 6);
-    if (cabem) {
-      for (const [barra, valor] of barras) {
-        if (eixo === 'x') { ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(formatarNumero(valor), barra.x + 5, barra.y); }
-        else { ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(formatarNumero(valor), barra.x, barra.y - 3); }
-      }
+    const barras = itens.filter(x => !x.linha);
+    const cabem = eixo === 'x' || barras.every(b => ctx.measureText(b.texto).width <= b.elemento.width + 6);
+    for (const { elemento, linha, texto } of itens) {
+      if (eixo === 'x') { ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(texto, elemento.x + 5, elemento.y); }
+      else if (linha || cabem) { ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(texto, elemento.x, elemento.y - (linha ? 7 : 3)); }
     }
     ctx.restore();
   }

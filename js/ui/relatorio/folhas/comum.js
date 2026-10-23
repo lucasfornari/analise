@@ -15,13 +15,13 @@ export const pct = fracao => formatarPercentual(fracao ?? 0);
 export const cartao = (valor, rotulo, detalhe = '', classe = '') =>
   `<div class="cartao-rel ${classe}"><b>${valor}</b><span>${rotulo}</span>${detalhe ? `<small>${detalhe}</small>` : ''}</div>`;
 
-// Variação mês a mês: subir é ruim (mais exceções).
-export function variacaoHtml(variacao) {
+// Variação mês a mês: subir é ruim (mais exceções). neutra: sem cor (ex.: viagens, onde subir não é piora).
+export function variacaoHtml(variacao, { neutra = false } = {}) {
   if (!variacao) return '<span class="apagado">–</span>';
   const { pct: fracao, diferenca } = variacao;
-  const classe = diferenca > 0 ? 'alta' : diferenca < 0 ? 'baixa' : '';
+  const classe = neutra ? 'neutra' : diferenca > 0 ? 'alta' : diferenca < 0 ? 'baixa' : '';
   const seta = diferenca > 0 ? '▲' : diferenca < 0 ? '▼' : '';
-  return `<span class="variacao ${classe}">${seta} ${fracao == null ? 'novo' : formatarVariacao(fracao)}</span>`;
+  return `<span class="variacao ${classe}">${seta ? seta + ' ' : ''}${fracao == null ? 'novo' : formatarVariacao(fracao)}</span>`;
 }
 
 // Principais exceções de um item: nome, quantidade e % do total do item, e o que ficou de fora.
