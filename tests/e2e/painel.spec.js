@@ -275,7 +275,7 @@ test.describe('com a planilha carregada', () => {
     await page.locator('.acc-sec[data-sec="exc"] .acc-head').click();                  // a lista abre ao lado da gaveta, visível
     const lista = page.locator('.acc-sec[data-sec="exc"] .acc-body');
     await expect(lista).toBeVisible();
-    expect((await lista.boundingBox()).x).toBe(caixa.width);
+    await expect.poll(async () => Math.round((await lista.boundingBox()).x)).toBe(Math.round(caixa.width));   // espera a animação de abertura
     await page.locator('#excList .grp', { hasText: 'Contexto suspeito' }).getByRole('button', { name: 'só estes' }).click();
     await expect(page.locator('#badgeFiltrosMapa')).toHaveText('1');
   });
