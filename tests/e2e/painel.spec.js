@@ -262,6 +262,24 @@ test.describe('com a planilha carregada', () => {
     await expect(kpi(page, 0)).toHaveText('2');                                        // o filtro escolhido lá continua valendo
   });
 
+  test('mapa em tela cheia: a gaveta de filtros abre mesmo com o menu lateral recolhido', async ({ page }) => {
+    await page.locator('#btnHamb').click();                                            // menu recolhido no painel normal
+    await expect(page.locator('.app')).toHaveClass(/collapsed/);
+    await page.locator('#btnTelaCheia').click();
+    await page.locator('#btnFiltrosMapa').click();
+    const gaveta = page.locator('aside#filters');
+    await expect(gaveta).toBeVisible();
+    const caixa = await gaveta.boundingBox();
+    expect(caixa.width).toBeGreaterThan(250);
+    expect((await page.locator('.map-card').boundingBox()).x).toBe(caixa.width);       // o mapa começa onde a gaveta termina
+    await page.locator('.acc-sec[data-sec="exc"] .acc-head').click();                  // a lista abre ao lado da gaveta, visível
+    const lista = page.locator('.acc-sec[data-sec="exc"] .acc-body');
+    await expect(lista).toBeVisible();
+    expect((await lista.boundingBox()).x).toBe(caixa.width);
+    await page.locator('#excList .grp', { hasText: 'Contexto suspeito' }).getByRole('button', { name: 'só estes' }).click();
+    await expect(page.locator('#badgeFiltrosMapa')).toHaveText('1');
+  });
+
   test('mapa: detalhes do local com placas, motoristas, eventos, busca e exportação', async ({ page }) => {
     await linhas(page, 'tblLoc').first().click();
     await page.locator('.popup-local [data-detalhe]').click();

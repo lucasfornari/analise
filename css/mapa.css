@@ -67,12 +67,12 @@ input[type=range]{accent-color:var(--navy);width:110px;vertical-align:middle}
 #btnFiltrosMapa .badge.hidden{display:none}
 .mapa-tela-cheia #btnFiltrosMapa{display:inline-flex}
 .filtros-flutuantes #btnFiltrosMapa{background:var(--navy);color:var(--neon)}
-body.mapa-tela-cheia{overflow:hidden;--top:0px}
+body.mapa-tela-cheia{overflow:hidden;--top:0px;--gaveta:290px}   /* largura própria: o menu recolhido no painel deixa --side em 0 */
 .mapa-tela-cheia header.top{display:none}
 .mapa-tela-cheia .map-card{position:fixed;inset:0;z-index:1500;margin:0;border-radius:0;display:flex;flex-direction:column}
 .mapa-tela-cheia .map-card #map{flex:1;height:auto;scroll-margin-top:0}
 /* gaveta de filtros: o próprio menu lateral, flutuando à esquerda do mapa (as listas abrem ao lado dela) */
 .mapa-tela-cheia aside#filters{display:none}
-.mapa-tela-cheia.filtros-flutuantes aside#filters{display:block;visibility:visible;position:fixed;top:0;left:0;bottom:0;width:var(--side);height:auto;padding:16px 14px;z-index:1600;box-shadow:8px 0 30px rgba(2,0,57,.25);overflow:auto;border-right:1px solid var(--line)}
-.mapa-tela-cheia.filtros-flutuantes .map-card{left:var(--side)}
+.mapa-tela-cheia.filtros-flutuantes aside#filters{--side:var(--gaveta);display:block;visibility:visible;position:fixed;top:0;left:0;bottom:0;width:var(--gaveta);height:auto;padding:16px 14px;z-index:1600;box-shadow:8px 0 30px rgba(2,0,57,.25);overflow:auto;border-right:1px solid var(--line)}
+.mapa-tela-cheia.filtros-flutuantes .map-card{left:var(--gaveta)}
 .mapa-tela-cheia .acc-body{z-index:1700}
