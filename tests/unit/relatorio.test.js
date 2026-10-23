@@ -25,11 +25,28 @@ test('viagens com exceções: SMs distintas por mês da exceção; total conta c
   assert.equal(v.total, 9);
   assert.deepEqual(v.meses.map(m => [m.mes, m.viagens, m.excecoes]), [['2026-07', 2, 4], ['2026-08', 2, 6], ['2026-09', 5, 17]]);
   assert.equal(v.meses.reduce((s, m) => s + m.excecoes, 0), ESPERADO.eventos);
-  assert.deepEqual(v.meses[2].variacao, { anterior: 2, diferenca: 3, pct: 1.5 });
+  assert.deepEqual(v.meses[2].variacao, { anterior: 2, diferenca: 3, pct: 1.5 });              // viagens
+  assert.deepEqual(v.meses[2].variacaoExcecoes, { anterior: 6, diferenca: 11, pct: 11 / 6 });
+  // intensidade: 17 exceções em 5 viagens (3,4) contra 6 em 2 (3,0)
+  assert.equal(v.meses[2].porViagem, 3.4);
+  assert.equal(v.meses[2].variacaoPorViagem.anterior, 3);
+  assert.ok(Math.abs(v.meses[2].variacaoPorViagem.pct - 0.4 / 3) < 1e-12);
   assert.equal(v.meses[0].variacao, null, 'sem o mês anterior nos dados');
   // viagem com exceção em agosto e setembro: conta nos dois meses e uma vez no total
   const cruzou = contarViagens([{ viagem: '1', mes: '2026-08' }, { viagem: '1', mes: '2026-09' }, { viagem: '2', mes: '2026-09' }, { viagem: '', mes: '2026-09' }]);
   assert.deepEqual([cruzou.total, cruzou.porMes.get('2026-08').size, cruzou.porMes.get('2026-09').size, cruzou.semViagem], [2, 1, 2, 1]);
+});
+
+test('mais viagens com menos exceções por viagem: o resumo traz as três variações do último mês juntas', () => {
+  // como no caso real que confundiu: exceções quase iguais, viagens subindo, intensidade caindo
+  const evento = (viagem, mes) => ({ viagem, mes, cliente: 'C', excecao: 'X', classe: 'MOTORISTA', grupo: 'VELOCIDADE', data: null });
+  const agosto = Array.from({ length: 100 }, (_, i) => evento(String(i % 20), '2026-08'));        // 100 em 20 viagens: 5,0
+  const setembro = Array.from({ length: 99 }, (_, i) => evento(String(100 + i % 33), '2026-09')); // 99 em 33 viagens: 3,0
+  const { ultimoMes } = montarRelatorio([...agosto, ...setembro], { ids: ['resumo'], opcoes: OPCOES_DO_RELATORIO }).secoes.resumo.dados;
+  assert.equal(ultimoMes.variacaoExcecoes.diferenca, -1);
+  assert.equal(ultimoMes.variacao.pct, 13 / 20);   // viagens: 20 -> 33
+  assert.equal(ultimoMes.porViagem, 3);
+  assert.equal(ultimoMes.variacaoPorViagem.pct, -0.4);
 });
 
 test('exceções: total, classes e ranking por nome com percentual', () => {

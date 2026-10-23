@@ -1,36 +1,55 @@
-// Viagens com exceções mês a mês: gráfico e tabela com variação e exceções por viagem.
+// Viagens e exceções por viagem: mostra lado a lado viagens, exceções e a intensidade (exceções por viagem),
+// para não ler "mais exceções" como piora quando o mês simplesmente teve mais viagens.
 import { formatarNumero, rotuloMes } from '../../../util/formatacao.js';
 import { CORES } from '../../../config/tema.js';
 import { graficoComoImagem, eixoX, eixoY } from '../graficos.js';
 import { bloco, cartao, variacaoHtml } from './comum.js';
 
 const decimal = v => v == null ? '–' : v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const COR_INTENSIDADE = CORES.alta;
 
 export function viagens(paginador, { secao }) {
   const d = secao.dados;
-  paginador.nova({ secao: 'viagens', titulo: secao.titulo, lead: 'Viagens (SMs) que tiveram ao menos uma exceção, pelo mês da exceção.' });
-  const media = d.meses.length ? d.meses.reduce((s, m) => s + m.viagens, 0) / d.meses.length : 0;
+  paginador.nova({ secao: 'viagens', titulo: secao.titulo,
+    lead: 'Mais viagens no mês trazem mais exceções. O que mostra se o mês foi melhor ou pior é a quantidade de <b>exceções por viagem</b>.' });
+  const ultimo = d.meses[d.meses.length - 1];
   paginador.adicionar(bloco([
     cartao(formatarNumero(d.total), 'viagens com exceções no período'),
-    cartao(formatarNumero(Math.round(media)), 'média por mês'),
-    cartao(d.meses.length ? formatarNumero(d.meses[d.meses.length - 1].viagens) : '–', 'no último mês', d.meses.length ? variacaoHtml(d.meses[d.meses.length - 1].variacao) : '')
-  ].join(''), 'cartoes-rel tres'));
+    cartao(ultimo ? formatarNumero(ultimo.viagens) : '–', 'viagens no último mês', ultimo ? variacaoHtml(ultimo.variacao, { neutra: true }) : ''),
+    cartao(ultimo ? formatarNumero(ultimo.excecoes) : '–', 'exceções no último mês', ultimo ? variacaoHtml(ultimo.variacaoExcecoes) : ''),
+    cartao(ultimo ? decimal(ultimo.porViagem) : '–', 'exceções por viagem no último mês', ultimo ? variacaoHtml(ultimo.variacaoPorViagem) : '', 'destaque')
+  ].join(''), 'cartoes-rel quatro'));
 
+  // colunas: viagens e exceções (eixo da esquerda); linha: exceções por viagem (eixo da direita)
   const muitos = d.meses.length > 8;
+  paginador.adicionar(bloco(`<span><i class="quadro viagens"></i>Viagens com exceções</span><span><i class="quadro excecoes"></i>Exceções</span>
+    <span><i class="linha-legenda"></i>Exceções por viagem (eixo da direita)</span>`, 'legenda-rel legenda-bloco'));
   paginador.adicionar(graficoComoImagem({
     type: 'bar',
     data: {
       labels: d.meses.map(m => muitos ? rotuloMes(m.mes).split('/') : rotuloMes(m.mes)),
-      datasets: [{ data: d.meses.map(m => m.viagens), backgroundColor: CORES.navy, borderRadius: 3, maxBarThickness: 56 }]
+      datasets: [
+        { label: 'Viagens com exceções', data: d.meses.map(m => m.viagens), backgroundColor: CORES.navy, borderRadius: 3, maxBarThickness: 44, order: 2 },
+        { label: 'Exceções', data: d.meses.map(m => m.excecoes), backgroundColor: CORES.indigo, borderRadius: 3, maxBarThickness: 44, order: 2 },
+        { type: 'line', label: 'Exceções por viagem', data: d.meses.map(m => m.porViagem == null ? null : Math.round(m.porViagem * 10) / 10),
+          yAxisID: 'porViagem', borderColor: COR_INTENSIDADE, backgroundColor: COR_INTENSIDADE, borderWidth: 2.5, pointRadius: 4, tension: 0, order: 1, rotulo: decimal }
+      ]
     },
-    options: { layout: { padding: { top: 18 } }, scales: { x: eixoX(), y: eixoY() } }
-  }, { largura: 180, altura: 75 }));
+    options: {
+      layout: { padding: { top: 20 } },
+      scales: {
+        x: eixoX(), y: eixoY(),
+        porViagem: { position: 'right', beginAtZero: true, grid: { display: false }, ticks: { color: COR_INTENSIDADE, callback: v => decimal(v) } }
+      }
+    }
+  }, { largura: 180, altura: 80 }));
 
   paginador.tabela({
     classe: 'numerica',
-    cabecalho: '<tr><th>Mês</th><th class="num">Viagens com exceções</th><th class="num">Variação</th><th class="num">Exceções</th><th class="num">Exceções por viagem</th></tr>',
-    linhas: d.meses.map(m => `<tr><td>${rotuloMes(m.mes)}</td><td class="num"><b>${formatarNumero(m.viagens)}</b></td><td class="num">${variacaoHtml(m.variacao)}</td>`
-      + `<td class="num">${formatarNumero(m.excecoes)}</td><td class="num">${decimal(m.porViagem)}</td></tr>`)
+    cabecalho: '<tr><th>Mês</th><th class="num">Viagens</th><th class="num">Var.</th><th class="num">Exceções</th><th class="num">Var.</th><th class="num">Exceções por viagem</th><th class="num">Var.</th></tr>',
+    linhas: d.meses.map(m => `<tr><td>${rotuloMes(m.mes)}</td><td class="num">${formatarNumero(m.viagens)}</td><td class="num">${variacaoHtml(m.variacao, { neutra: true })}</td>`
+      + `<td class="num">${formatarNumero(m.excecoes)}</td><td class="num">${variacaoHtml(m.variacaoExcecoes)}</td>`
+      + `<td class="num"><b>${decimal(m.porViagem)}</b></td><td class="num">${variacaoHtml(m.variacaoPorViagem)}</td></tr>`)
   });
 
   const notas = [];

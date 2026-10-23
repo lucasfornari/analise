@@ -48,6 +48,11 @@
 .folha .ponto.motorista{background:var(--indigo)} .folha .ponto.veiculo{background:var(--navy)} .folha .ponto.contexto{background:var(--neon);box-shadow:0 0 0 .2mm var(--navy)}
 .folha .variacao{white-space:nowrap;font-weight:600}
 .folha .variacao.alta{color:var(--alta)} .folha .variacao.baixa{color:var(--baixa)}
+.folha .variacao.neutra{color:var(--muted)}
+.legenda-rel .quadro{display:inline-block;width:3mm;height:3mm;border-radius:.6mm}
+.legenda-rel .quadro.viagens{background:var(--navy)} .legenda-rel .quadro.excecoes{background:var(--indigo)}
+.legenda-rel .linha-legenda{display:inline-block;width:5mm;height:.7mm;background:var(--alta);border-radius:.3mm}
+.cartao-rel.destaque{border-top-color:var(--alta);background:#FDF3F3}
 
 /* tabelas */
 .tabela-rel{width:100%;border-collapse:collapse;font-size:9pt}

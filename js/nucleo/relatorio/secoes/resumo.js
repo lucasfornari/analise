@@ -1,18 +1,21 @@
 // Resumo executivo: os números principais do recorte e os destaques de cada seção.
-import { contarViagens } from './viagens.js';
+import { viagens as secaoViagens } from './viagens.js';
 
 export const resumo = {
   id: 'resumo',
   titulo: 'Resumo',
   regra: 'Números do recorte do relatório: cliente escolhido (ou carteira) com os filtros do painel no momento da geração.',
-  calcular({ registros, agregado }) {
+  calcular(contexto) {
+    const { registros, agregado } = contexto;
     let inicio = null, fim = null;
     for (const r of registros) {
       if (!r.data) continue;
       if (!inicio || r.data < inicio) inicio = r.data;
       if (!fim || r.data > fim) fim = r.data;
     }
-    const viagens = contarViagens(registros).total;
+    const porViagens = secaoViagens.calcular(contexto);
+    const viagens = porViagens.total;
+    const ultimo = porViagens.meses[porViagens.meses.length - 1];
     return {
       eventos: agregado.n,
       viagens,
@@ -26,6 +29,8 @@ export const resumo = {
       meses: agregado.meses,
       inicio, fim,
       variacao: agregado.variacao,
+      // último mês: exceções, viagens e exceções por viagem com a variação de cada um (lidos juntos no destaque)
+      ultimoMes: ultimo ?? null,
       destaques: {
         excecao: agregado.excecoes[0] ? { nome: agregado.excecoes[0].excecao, n: agregado.excecoes[0].total, pct: agregado.excecoes[0].total / agregado.n } : null,
         motorista: agregado.motoristas[0] ? { nome: agregado.motoristas[0].motorista, n: agregado.motoristas[0].total } : null,
