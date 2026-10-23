@@ -3,7 +3,7 @@
 import { formatarNumero, rotuloMes } from '../../../util/formatacao.js';
 import { CORES } from '../../../config/tema.js';
 import { graficoComoImagem, eixoX, eixoY } from '../graficos.js';
-import { bloco, cartao, variacaoHtml } from './comum.js';
+import { bloco, cartao, variacaoHtml, conclusaoDoMes } from './comum.js';
 
 const decimal = v => v == null ? '–' : v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const COR_INTENSIDADE = CORES.alta;
@@ -19,6 +19,8 @@ export function viagens(paginador, { secao }) {
     cartao(ultimo ? formatarNumero(ultimo.excecoes) : '–', 'exceções no último mês', ultimo ? variacaoHtml(ultimo.variacaoExcecoes) : ''),
     cartao(ultimo ? decimal(ultimo.porViagem) : '–', 'exceções por viagem no último mês', ultimo ? variacaoHtml(ultimo.variacaoPorViagem) : '', 'destaque')
   ].join(''), 'cartoes-rel quatro'));
+  const conclusao = conclusaoDoMes(ultimo);
+  if (conclusao) paginador.adicionar(bloco(conclusao));
 
   // colunas: viagens e exceções (eixo da esquerda); linha: exceções por viagem (eixo da direita)
   const muitos = d.meses.length > 8;

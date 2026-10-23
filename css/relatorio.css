@@ -52,7 +52,11 @@
 .legenda-rel .quadro{display:inline-block;width:3mm;height:3mm;border-radius:.6mm}
 .legenda-rel .quadro.viagens{background:var(--navy)} .legenda-rel .quadro.excecoes{background:var(--indigo)}
 .legenda-rel .linha-legenda{display:inline-block;width:5mm;height:.7mm;background:var(--alta);border-radius:.3mm}
-.cartao-rel.destaque{border-top-color:var(--alta);background:#FDF3F3}
+.cartao-rel.destaque{border-top-color:var(--navy);border-top-width:1.4mm;background:#F1F0FB}   /* destaque neutro: a cor da variação diz se melhorou ou piorou */
+.comparacao-rel{width:auto;min-width:120mm}
+.comparacao-rel tr.principal td{border-top:.4mm solid var(--navy);background:#F1F0FB !important}
+.conclusao-rel{margin:2.5mm 0 0;padding:2.5mm 3.5mm;border-left:1.2mm solid var(--navy);background:var(--soft);font-size:9.5pt}
+.conclusao-rel .melhora{color:var(--baixa)} .conclusao-rel .piora{color:var(--alta)}
 
 /* tabelas */
 .tabela-rel{width:100%;border-collapse:collapse;font-size:9pt}

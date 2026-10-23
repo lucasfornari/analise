@@ -95,3 +95,21 @@ test('apoio: percentil, distância e principais exceções', () => {
   assert.deepEqual(p.lista.map(x => x.nome), ['B', 'C']);
   assert.deepEqual(p.outras, { tipos: 1, eventos: 1 });
 });
+
+test('conclusão do mês em palavras, pelas exceções por viagem (caso BLD set/26)', async () => {
+  const { conclusaoDoMes, tabelaDoMes } = await import('../../js/ui/relatorio/folhas/comum.js');
+  const variacao = (anterior, atual) => ({ anterior, diferenca: atual - anterior, pct: (atual - anterior) / anterior });
+  const mes = (viagens, excecoes, antes) => ({
+    mes: '2026-09', viagens, excecoes, porViagem: excecoes / viagens,
+    variacao: variacao(antes.viagens, viagens), variacaoExcecoes: variacao(antes.excecoes, excecoes),
+    variacaoPorViagem: variacao(antes.excecoes / antes.viagens, excecoes / viagens)
+  });
+  const texto = html => html.replace(/<[^>]+>/g, '');
+  // exceções praticamente iguais, mais viagens: melhorou
+  assert.equal(texto(conclusaoDoMes(mes(924, 4528, { viagens: 833, excecoes: 4547 }))),
+    'Em set/26 houve mais viagens com exceção e praticamente o mesmo número de exceções que em ago/26. Resultado: melhorou. Cada viagem teve, em média, 4,9 exceções, contra 5,5 em ago/26 (10,2% a menos).');
+  // mais exceções por viagem: piorou, mesmo com menos viagens
+  assert.match(texto(conclusaoDoMes(mes(80, 500, { viagens: 100, excecoes: 500 }))), /^Em set\/26 houve menos viagens com exceção e praticamente o mesmo número de exceções que em ago\/26\. Resultado: piorou\. .*\(25,0% a mais\)\.$/);
+  assert.match(texto(tabelaDoMes(mes(924, 4528, { viagens: 833, excecoes: 4547 }))), /Exceções por viagem5,54,9▼ −10,2%/);
+  assert.equal(conclusaoDoMes({ mes: '2026-09', viagens: 1, excecoes: 1, porViagem: 1, variacao: null }), '', 'sem o mês anterior, não conclui');
+});
