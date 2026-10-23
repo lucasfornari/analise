@@ -229,6 +229,39 @@ test.describe('com a planilha carregada', () => {
     await expect(page.locator('.popup-local')).toHaveCount(0);
   });
 
+  test('mapa em tela cheia: cobre a tela, filtros numa gaveta que só existe ali, e volta ao normal', async ({ page }) => {
+    const corpo = page.locator('body'), cartao = page.locator('.map-card'), gaveta = page.locator('aside#filters');
+    const botaoFiltros = page.locator('#btnFiltrosMapa');
+    await expect(botaoFiltros).toBeHidden();                                           // fora da tela cheia não existe
+    await page.locator('#btnTelaCheia').click();
+    await expect(corpo).toHaveClass(/mapa-tela-cheia/);
+    await expect(page.locator('header.top')).toBeHidden();
+    const tela = page.viewportSize(), caixa = await cartao.boundingBox();
+    expect([caixa.x, caixa.y, caixa.width, caixa.height]).toEqual([0, 0, tela.width, tela.height]);
+    await expect(gaveta).toBeHidden();
+
+    // gaveta de filtros: o mesmo menu lateral, empurrando o mapa para o lado; filtrar atualiza o mapa
+    await botaoFiltros.click();
+    await expect(gaveta).toBeVisible();
+    expect((await gaveta.boundingBox()).x).toBe(0);
+    expect((await cartao.boundingBox()).x).toBe((await gaveta.boundingBox()).width);
+    await page.locator('.acc-sec[data-sec="exc"] .acc-head').click();
+    await page.locator('#excList .grp', { hasText: 'Contexto suspeito' }).getByRole('button', { name: 'só estes' }).click();
+    await expect(page.locator('#mapSub')).toHaveText('1 eventos georreferenciados em 1 pontos');
+    await expect(page.locator('#badgeFiltrosMapa')).toHaveText('1');
+    await page.keyboard.press('Escape');                                               // fecha a lista aberta
+    await page.keyboard.press('Control+b');                                            // Ctrl+B recolhe a gaveta
+    await expect(gaveta).toBeHidden();
+    await page.keyboard.press('Control+b');
+    await expect(gaveta).toBeVisible();
+
+    await page.locator('#btnTelaCheia').click();                                       // sai: tudo como antes
+    await expect(corpo).not.toHaveClass(/mapa-tela-cheia|filtros-flutuantes/);
+    await expect(page.locator('header.top')).toBeVisible();
+    await expect(botaoFiltros).toBeHidden();
+    await expect(kpi(page, 0)).toHaveText('2');                                        // o filtro escolhido lá continua valendo
+  });
+
   test('mapa: detalhes do local com placas, motoristas, eventos, busca e exportação', async ({ page }) => {
     await linhas(page, 'tblLoc').first().click();
     await page.locator('.popup-local [data-detalhe]').click();

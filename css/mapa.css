@@ -55,3 +55,24 @@ input[type=range]{accent-color:var(--navy);width:110px;vertical-align:middle}
 .modal-tabela{max-height:none;flex:1;min-height:160px}
 .modal-rodape{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:12px}
 .modal-rodape #detalheExportar{margin-left:auto}
+
+/* mapa em tela cheia (js/ui/TelaCheiaMapa.js): o cartão cobre a tela; o menu de filtros vira uma gaveta por cima */
+#btnTelaCheia{display:inline-grid;place-items:center;padding:5px 7px}
+#btnTelaCheia svg,#btnFiltrosMapa svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#btnTelaCheia .recolher,.mapa-tela-cheia #btnTelaCheia .expandir{display:none}
+.mapa-tela-cheia #btnTelaCheia .recolher{display:block}
+#btnFiltrosMapa{display:none;align-items:center;gap:6px;position:relative}
+#btnFiltrosMapa svg{fill:currentColor;stroke:none}
+#btnFiltrosMapa .badge{min-width:18px;height:18px;border-radius:9px;background:var(--navy);color:var(--neon);font-size:11px;font-weight:700;display:inline-grid;place-items:center;padding:0 4px}
+#btnFiltrosMapa .badge.hidden{display:none}
+.mapa-tela-cheia #btnFiltrosMapa{display:inline-flex}
+.filtros-flutuantes #btnFiltrosMapa{background:var(--navy);color:var(--neon)}
+body.mapa-tela-cheia{overflow:hidden;--top:0px}
+.mapa-tela-cheia header.top{display:none}
+.mapa-tela-cheia .map-card{position:fixed;inset:0;z-index:1500;margin:0;border-radius:0;display:flex;flex-direction:column}
+.mapa-tela-cheia .map-card #map{flex:1;height:auto;scroll-margin-top:0}
+/* gaveta de filtros: o próprio menu lateral, flutuando à esquerda do mapa (as listas abrem ao lado dela) */
+.mapa-tela-cheia aside#filters{display:none}
+.mapa-tela-cheia.filtros-flutuantes aside#filters{display:block;visibility:visible;position:fixed;top:0;left:0;bottom:0;width:var(--side);height:auto;padding:16px 14px;z-index:1600;box-shadow:8px 0 30px rgba(2,0,57,.25);overflow:auto;border-right:1px solid var(--line)}
+.mapa-tela-cheia.filtros-flutuantes .map-card{left:var(--side)}
+.mapa-tela-cheia .acc-body{z-index:1700}

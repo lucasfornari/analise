@@ -20,7 +20,8 @@ export class Atalhos {
     const modificador = e.ctrlKey || e.metaKey;
     if (modificador && !e.shiftKey && !e.altKey && e.code === 'KeyB') {
       e.preventDefault();
-      painel.lateral.alternar();
+      // com o mapa em tela cheia, o menu vira a gaveta de filtros por cima do mapa
+      painel.telaCheia.ativa ? painel.telaCheia.alternarFiltros() : painel.lateral.alternar();
       return;
     }
     const lSimples = !modificador && !e.altKey && !e.shiftKey && e.code === 'KeyL' && !digitando(e.target);
